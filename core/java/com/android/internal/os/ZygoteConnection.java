@@ -221,6 +221,7 @@ class ZygoteConnection {
         }
 
         if (pid == 0) {
+        	//子进程，这个地方一般是Apk的进程了，里面会抛出异常，
             // in child
             handleChildProc(parsedArgs, descriptors, newStderr);
             // should never happen
@@ -663,7 +664,7 @@ class ZygoteConnection {
         }
     }
 
-    /**
+    /**处理一般Apk进程，
      * Handles post-fork setup of child proc, closing sockets as appropriate,
      * reopen stdio as appropriate, and ultimately throwing MethodAndArgsCaller
      * if successful or returning if failed.
@@ -740,6 +741,7 @@ class ZygoteConnection {
                     mainArgs, 0, mainArgs.length);
 
             try {
+            	//使用指定的加载器加载指定的类，找到入口方法，抛出异常，
                 ZygoteInit.invokeStaticMain(cloader, className, mainArgs);
             } catch (RuntimeException ex) {
                 logAndPrintError (newStderr, "Error starting. ", ex);

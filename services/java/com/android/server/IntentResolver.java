@@ -199,7 +199,7 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
     public Set<F> filterSet() {
         return Collections.unmodifiableSet(mFilters);
     }
-
+		//从指定的列表里面筛选，，
     public List<R> queryIntentFromList(Intent intent, String resolvedType, 
             boolean defaultOnly, ArrayList<ArrayList<F>> listCut) {
         ArrayList<R> resultList = new ArrayList<R>();
@@ -216,7 +216,7 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
         sortResults(resultList);
         return resultList;
     }
-
+		//查询intent对应的组件信息，，，先粗选，缩小范围，，
     public List<R> queryIntent(Intent intent, String resolvedType, boolean defaultOnly) {
         String scheme = intent.getScheme();
 
@@ -236,13 +236,16 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
 
         // If the intent includes a MIME type, then we want to collect all of
         // the filters that match that MIME type.
+        //mime类型，，，  类似于image/jpeg
         if (resolvedType != null) {
             int slashpos = resolvedType.indexOf('/');
             if (slashpos > 0) {
                 final String baseType = resolvedType.substring(0, slashpos);
                 if (!baseType.equals("*")) {
+                	 //基类型不是通配符，，
                     if (resolvedType.length() != slashpos+2
                             || resolvedType.charAt(slashpos+1) != '*') {
+                            	//基类型和子类型都不是通配符号，，，resolvedType类似于  image/jpeg
                         // Not a wild card, so we can just look for all filters that
                         // completely match or wildcards whose base type matches.
                         firstTypeCut = mTypeToFilter.get(resolvedType);
@@ -250,6 +253,7 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
                         secondTypeCut = mWildTypeToFilter.get(baseType);
                         if (debug) Slog.v(TAG, "Second type cut: " + secondTypeCut);
                     } else {
+                    	  //对应子类型是通配符，，，
                         // We can match anything with our base type.
                         firstTypeCut = mBaseTypeToFilter.get(baseType);
                         if (debug) Slog.v(TAG, "First type cut: " + firstTypeCut);
@@ -277,7 +281,7 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
             schemeCut = mSchemeToFilter.get(scheme);
             if (debug) Slog.v(TAG, "Scheme list: " + schemeCut);
         }
-
+				//如果intent既没有指定mime也没有指定uri,,,
         // If the intent does not specify any data -- either a MIME type or
         // a URI -- then we will only be looking for matches against empty
         // data.
@@ -285,7 +289,7 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
             firstTypeCut = mActionToFilter.get(intent.getAction());
             if (debug) Slog.v(TAG, "Action list: " + firstTypeCut);
         }
-
+				//每次调用都缩小最终匹配集的大小，，
         if (firstTypeCut != null) {
             buildResolveList(intent, debug, defaultOnly,
                     resolvedType, scheme, firstTypeCut, finalList);
@@ -486,7 +490,7 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
         boolean hasNonDefaults = false;
         int i;
         for (i=0; i<N; i++) {
-            F filter = src.get(i);
+            F filter = src.get(i); //类似于ActivityIntentInfo
             int match;
             if (debug) Slog.v(TAG, "Matching against filter " + filter);
 
@@ -540,19 +544,19 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
         }
     };
 
-    /**
+    /**包含了所有包含MIME类型的对象
      * All filters that have been registered.
      */
     private final HashSet<F> mFilters = new HashSet<F>();
 
-    /**
+    /**是mFilter的一个子集，，，image/jpeg  image/*  
      * All of the MIME types that have been registered, such as "image/jpeg",
      * "image/*", or "{@literal *}/*".
      */
     private final HashMap<String, ArrayList<F>> mTypeToFilter
             = new HashMap<String, ArrayList<F>>();
 
-    /**
+    /**是mFilters的一个子集，，，image或*
      * The base names of all of all fully qualified MIME types that have been
      * registered, such as "image" or "*".  Wild card MIME types such as
      * "image/*" will not be here.
@@ -560,7 +564,7 @@ public class IntentResolver<F extends IntentFilter, R extends Object> {
     private final HashMap<String, ArrayList<F>> mBaseTypeToFilter
             = new HashMap<String, ArrayList<F>>();
 
-    /**
+    /**是mTypeToFilter的子集，，，
      * The base names of all of the MIME types with a sub-type wildcard that
      * have been registered.  For example, a filter with "image/*" will be
      * included here as "image" but one with "image/jpeg" will not be

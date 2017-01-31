@@ -92,7 +92,7 @@ public class DefaultContainerService extends IntentService {
             return copyResourceInner(packageURI, cid, key, resFileName);
         }
 
-        /*
+        /*复制资源，，，
          * Copy specified resource to output stream
          * @param packageURI the uri of resource to be copied. Should be a
          * file uri

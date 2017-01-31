@@ -37,7 +37,7 @@ import android.util.Printer;
 
 import com.android.internal.util.XmlUtils;
 
-/**
+/**对应一个组件里面的intent-filter标签，，
  * Structured description of Intent values to be matched.  An IntentFilter can
  * match against actions, categories, and data (either via its type, scheme,
  * and/or path) in an Intent.  It also includes a "priority" value which is
@@ -1068,7 +1068,7 @@ public class IntentFilter implements Parcelable {
                      intent.getData(), intent.getCategories(), logTag);
     }
 
-    /**
+    /**检测这个intentfilter是否匹配了指定的intent
      * Test whether this filter matches the given intent data.  A match is
      * only successful if the actions and categories in the Intent match
      * against the filter, as described in {@link IntentFilter}; in that case,

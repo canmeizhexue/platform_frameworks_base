@@ -74,7 +74,7 @@ public:
             IPCThreadState::self()->stopProcess();
         }
     }
-
+		//这个函数主要在SystemServer进程执行java层的RuntimeInit的zygoteInitNative函数进来的。
     virtual void onZygoteInit()
     {
         sp<ProcessState> proc = ProcessState::self();
@@ -107,7 +107,7 @@ public:
 
 using namespace android;
 
-/*
+/*const_cast会去掉或者加上字符指针的const属性
  * sets argv0 to as much of newArgv0 as will fit
  */
 static void setArgv0(const char *argv0, const char *newArgv0)
@@ -117,6 +117,7 @@ static void setArgv0(const char *argv0, const char *newArgv0)
 
 int main(int argc, const char* const argv[])
 {
+	//在ProcessState.cpp里面有全局变量保存这个参数值，
     // These are global variables in ProcessState.cpp
     mArgC = argc;
     mArgV = argv;
@@ -130,20 +131,25 @@ int main(int argc, const char* const argv[])
     AppRuntime runtime;
     const char *arg;
     const char *argv0;
-
-    argv0 = argv[0];
+		//我们考虑init.rc里面的service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-system-server
+		//那么执行的时候就变成了zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-system-server
+		//第一个参数就是zygote,
+    argv0 = argv[0];//
 
     // Process command line arguments
     // ignore argv[0]
+    //argv[0]其实是程序名，argv[1]才是真正的第一个参数，下面这俩行代码就是跳过第一个参数zygote
     argc--;
     argv++;
 
     // Everything up to '--' or first non '-' arg goes to the vm
+    //下面这行代码i标识字符串/system/bin/app_process
     
     int i = runtime.addVmArguments(argc, argv);
 
     // Next arg is parent directory
     if (i < argc) {
+    	//保存/system/bin/app_process
         runtime.mParentDir = argv[i++];
     }
 

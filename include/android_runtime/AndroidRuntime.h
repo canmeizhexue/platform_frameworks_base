@@ -30,7 +30,7 @@
 
 
 namespace android {
-    
+  //在命名空间android下声明AndroidRuntime类 
 class AndroidRuntime
 {
 public:

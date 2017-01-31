@@ -405,7 +405,7 @@ void IPCThreadState::flushCommands()
         return;
     talkWithDriver(false);
 }
-
+//加入线程池，
 void IPCThreadState::joinThreadPool(bool isMain)
 {
     LOG_THREADPOOL("**** THREAD %p (PID %d) IS JOINING THE THREAD POOL\n", (void*)pthread_self(), getpid());
@@ -620,7 +620,7 @@ status_t IPCThreadState::clearDeathNotification(int32_t handle, BpBinder* proxy)
     mOut.writeInt32((int32_t)proxy);
     return NO_ERROR;
 }
-
+//构造函数
 IPCThreadState::IPCThreadState()
     : mProcess(ProcessState::self()),
       mMyThreadId(androidGetTid()),
@@ -632,7 +632,7 @@ IPCThreadState::IPCThreadState()
     mIn.setDataCapacity(256);
     mOut.setDataCapacity(256);
 }
-
+//析构函数
 IPCThreadState::~IPCThreadState()
 {
 }

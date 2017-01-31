@@ -453,7 +453,7 @@ public class PackageParser {
 
         return pkg;
     }
-
+		//收集证书信息，，，，
     public boolean collectCertificates(Package pkg, int flags) {
         pkg.mSignatures = null;
 
@@ -472,6 +472,7 @@ public class PackageParser {
         }
 
         try {
+        	//对应的是apk文件，，，，
             JarFile jarFile = new JarFile(mArchiveSourcePath);
 
             Certificate[] certs = null;
@@ -482,6 +483,7 @@ public class PackageParser {
                 // to retrieve its signatures, not validating all of the
                 // files.
                 JarEntry jarEntry = jarFile.getJarEntry("AndroidManifest.xml");
+                //加载证书，，，，
                 certs = loadCertificates(jarFile, jarEntry, readBuffer);
                 if (certs == null) {
                     Log.e(TAG, "Package " + pkg.packageName
@@ -2839,7 +2841,7 @@ public class PackageParser {
     }
 
     public static class Component<II extends IntentInfo> {
-        public final Package owner;
+        public final Package owner;//这个组件属于哪个包，，，
         public final ArrayList<II> intents;
         public final String className;
         public Bundle metaData;
@@ -2950,11 +2952,11 @@ public class PackageParser {
             componentShortName = null;
         }
     }
-    
+    //描述定义的权限，，
     public final static class Permission extends Component<IntentInfo> {
-        public final PermissionInfo info;
+        public final PermissionInfo info;//详细的权限描述
         public boolean tree;
-        public PermissionGroup group;
+        public PermissionGroup group;//这个权限所在的组，，，
 
         public Permission(Package _owner) {
             super(_owner);
@@ -2977,9 +2979,9 @@ public class PackageParser {
                 + " " + info.name + "}";
         }
     }
-
+		//权限组，，
     public final static class PermissionGroup extends Component<IntentInfo> {
-        public final PermissionGroupInfo info;
+        public final PermissionGroupInfo info;//权限组的详细信息，，，
 
         public PermissionGroup(Package _owner) {
             super(_owner);
@@ -3002,7 +3004,7 @@ public class PackageParser {
                 + " " + info.name + "}";
         }
     }
-
+		//根据flags确定是否需要重新复制，，
     private static boolean copyNeeded(int flags, Package p, Bundle metaData) {
         if (p.mSetEnabled != PackageManager.COMPONENT_ENABLED_STATE_DEFAULT) {
             boolean enabled = p.mSetEnabled == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
@@ -3093,7 +3095,7 @@ public class PackageParser {
                 + " " + getComponentShortName() + "}";
         }
     }
-
+		//产生这个Activity对应的ActivityInfo
     public static final ActivityInfo generateActivityInfo(Activity a,
             int flags) {
         if (a == null) return null;

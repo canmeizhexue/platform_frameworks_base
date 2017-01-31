@@ -626,6 +626,7 @@ public class SystemServer
     }
 
     public static final void init2() {
+    		//被底层c调用，启动线程，进行消息循环，
         Slog.i(TAG, "Entered the Android system server!");
         Thread thr = new ServerThread();
         thr.setName("android.server.ServerThread");

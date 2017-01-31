@@ -20,7 +20,7 @@
 #include "JNIHelp.h"
 
 namespace android {
-
+//这个函数在另外一个so文件libsystem_server里面定义了，但是编译当前的so时和目标so文件libsystem_server进行了链接，所以能够找到。
 extern "C" int system_init();
 
 static void android_server_SystemServer_init1(JNIEnv* env, jobject clazz)

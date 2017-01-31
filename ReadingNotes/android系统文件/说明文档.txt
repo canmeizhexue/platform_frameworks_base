@@ -1,0 +1,8 @@
+platform.xml--------/system/etc/permissions/platform.xml
+packages.xml--------/data/system/packages.xml
+里面的permissions标签包含所有的权限(包括framework定义的权限和应用程序自定义的权限)
+里面的一个package标签代表一个应用程序，，
+
+
+
+packages.list--------/data/system/packages.list  第一项是包名，第二项是linux用户id,,,第三项是代表是否可以调试，第四项代表数据文件目录

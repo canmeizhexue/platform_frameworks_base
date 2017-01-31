@@ -258,7 +258,7 @@ class PackageManagerService extends IPackageManager.Stub {
     // operations.  Methods that must be called with this lock held have
     // the prefix "LI".
     final Object mInstallLock = new Object();
-
+		
     // These are the directories in the 3rd party applications installed dir
     // that we have currently loaded packages from.  Keys are the application's
     // installed zip file (absolute codePath), and values are Package.
@@ -272,7 +272,7 @@ class PackageManagerService extends IPackageManager.Stub {
     final int[] mOutPermissions = new int[3];
 
     // ----------------------------------------------------------------
-
+		//保存所有程序包信息，来源于扫描特定目录，，//包名到PackageParser.Package
     // Keys are String (package name), values are Package.  This also serves
     // as the lock for the global state.  Methods that must be called with
     // this lock held have the prefix "LP".
@@ -283,20 +283,27 @@ class PackageManagerService extends IPackageManager.Stub {
     boolean mRestoredSettings;
 
     // Group-ids that are given to all packages as read from etc/permissions/*.xml.
-    int[] mGlobalGids;
-
+    int[] mGlobalGids;//授予给所有app的共同gid信息组，，，
+    
+    
+			            //一个uid可能对应多个系统权限，，，
+                    //    <assign-permission name="android.permission.UPDATE_DEVICE_STATS" uid="media" />
+    								//<assign-permission name="android.permission.UPDATE_APP_OPS_STATS" uid="media" />
+   									// <assign-permission name="com.sonyericsson.permission.CAMERA_EXTENDED" uid="media" />
+   	//key是数字形式的uid,,
     // These are the built-in uid -> permission mappings that were read from the
     // etc/permissions.xml file.
     final SparseArray<HashSet<String>> mSystemPermissions =
-            new SparseArray<HashSet<String>>();
-
+            new SparseArray<HashSet<String>>();//系统中所有权限信息
+		//系统所依赖的共享java库，来源于<library name="android.test.runner" file="/system/framework/android.test.runner.jar" />
+    //key是文件名，value是文件路径 
     // These are the built-in shared libraries that were read from the
     // etc/permissions.xml file.
     final HashMap<String, String> mSharedLibraries = new HashMap<String, String>();
 
     // Temporary for building the final shared libraries for an .apk.
     String[] mTmpSharedLibraries = null;
-
+			//设备支持的功能信息，，，，
     // These are the features this devices supports that were read from the
     // etc/permissions.xml file.
     final HashMap<String, FeatureInfo> mAvailableFeatures =
@@ -325,7 +332,7 @@ class PackageManagerService extends IPackageManager.Stub {
     // Mapping from instrumentation class names to info about them.
     final HashMap<ComponentName, PackageParser.Instrumentation> mInstrumentation =
             new HashMap<ComponentName, PackageParser.Instrumentation>();
-
+		//系统中的权限组，，key是权限组的名称，，
     // Mapping from permission names to info about them.
     final HashMap<String, PackageParser.PermissionGroup> mPermissionGroups =
             new HashMap<String, PackageParser.PermissionGroup>();
@@ -490,6 +497,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     } else if (mPendingInstalls.size() > 0) {
                         HandlerParams params = mPendingInstalls.get(0);
                         if (params != null) {
+                        	//开始安装，，
                             params.startCopy();
                         }
                     } else {
@@ -608,10 +616,12 @@ class PackageManagerService extends IPackageManager.Stub {
                             if (update) {
                                 extras.putBoolean(Intent.EXTRA_REPLACING, true);
                             }
+                            //发送安装了apk的广播，
                             sendPackageBroadcast(Intent.ACTION_PACKAGE_ADDED,
                                     res.pkg.applicationInfo.packageName,
                                     extras, null);
                             if (update) {
+                            	//发送更新安装的广播，
                                 sendPackageBroadcast(Intent.ACTION_PACKAGE_REPLACED,
                                         res.pkg.applicationInfo.packageName,
                                         extras, null);
@@ -629,6 +639,7 @@ class PackageManagerService extends IPackageManager.Stub {
                                 res.removedInfo.args.doPostDeleteLI(true);
                             }
                         }
+                        //回调安装结果，，，
                         if (args.observer != null) {
                             try {
                                 args.observer.packageInstalled(res.name, res.returnCode);
@@ -692,7 +703,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return false;
     }
-
+		//入口函数
     public static final IPackageManager main(Context context, boolean factoryTest) {
         PackageManagerService m = new PackageManagerService(context, factoryTest);
         ServiceManager.addService("package", m);
@@ -720,7 +731,7 @@ class PackageManagerService extends IPackageManager.Stub {
         res[count] = str.substring(lastI, str.length());
         return res;
     }
-
+		//构造函数，，
     public PackageManagerService(Context context, boolean factoryTest) {
         EventLog.writeEvent(EventLogTags.BOOT_PROGRESS_PMS_START,
                 SystemClock.uptimeMillis());
@@ -734,6 +745,7 @@ class PackageManagerService extends IPackageManager.Stub {
         mNoDexOpt = "eng".equals(SystemProperties.get("ro.build.type"));
         mMetrics = new DisplayMetrics();
         mSettings = new Settings();
+        //添加4个共享用户id信息，，，这4个都不是应用程序范围内的uid
         mSettings.addSharedUserLP("android.uid.system",
                 Process.SYSTEM_UID, ApplicationInfo.FLAG_SYSTEM);
         mSettings.addSharedUserLP("android.uid.phone",
@@ -765,7 +777,7 @@ class PackageManagerService extends IPackageManager.Stub {
             mDefParseFlags = 0;
             mSeparateProcesses = null;
         }
-
+				//用来安装apk的，
         Installer installer = new Installer();
         // Little hacky thing to check if installd is here, to determine
         // whether we are running on the simulator and thus need to take
@@ -786,10 +798,10 @@ class PackageManagerService extends IPackageManager.Stub {
             mHandlerThread.start();
             mHandler = new PackageHandler(mHandlerThread.getLooper());
 
-            File dataDir = Environment.getDataDirectory();
-            mAppDataDir = new File(dataDir, "data");
-            mSecureAppDataDir = new File(dataDir, "secure/data");
-            mDrmAppPrivateInstallDir = new File(dataDir, "app-private");
+            File dataDir = Environment.getDataDirectory();  //  /data
+            mAppDataDir = new File(dataDir, "data"); //   /data/data
+            mSecureAppDataDir = new File(dataDir, "secure/data"); // /data/secure/data
+            mDrmAppPrivateInstallDir = new File(dataDir, "app-private");//  /data/app-private
 
             if (mInstaller == null) {
                 // Make sure these dirs exist, when we are running in
@@ -803,7 +815,9 @@ class PackageManagerService extends IPackageManager.Stub {
             }
 
             readPermissions();
-
+            
+            
+						//读取系统里面的所有权限以及应用程序使用的权限列表
             mRestoredSettings = mSettings.readLP();
             long startTime = SystemClock.uptimeMillis();
 
@@ -820,9 +834,9 @@ class PackageManagerService extends IPackageManager.Stub {
 
             final HashSet<String> libFiles = new HashSet<String>();
 
-            mFrameworkDir = new File(Environment.getRootDirectory(), "framework");
-            mDalvikCacheDir = new File(dataDir, "dalvik-cache");
-
+            mFrameworkDir = new File(Environment.getRootDirectory(), "framework");//  /system/framework
+            mDalvikCacheDir = new File(dataDir, "dalvik-cache");//  /data/dalvik-cache
+						//对系统库文件进行dex文件提取，，，，
             if (mInstaller != null) {
                 boolean didDexOpt = false;
 
@@ -850,7 +864,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     Slog.w(TAG, "No BOOTCLASSPATH found!");
                 }
 
-                /**
+                /**之前解析/system/etc/permissions/platform.xml得到的，，，
                  * Also ensure all external libraries have had dexopt run on them.
                  */
                 if (mSharedLibraries.size() > 0) {
@@ -895,6 +909,7 @@ class PackageManagerService extends IPackageManager.Stub {
                         }
                         try {
                             if (dalvik.system.DexFile.isDexOptNeeded(path)) {
+                            	//进行dex文件优化，，，，
                                 mInstaller.dexopt(path, Process.SYSTEM_UID, true);
                                 didDexOpt = true;
                             }
@@ -925,7 +940,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     }
                 }
             }
-
+						//对于 /system/framework  、/system/app、/vendor/app三个目录进行扫描和监听，，，，
             // Find base frameworks (resource packages without code).
             mFrameworkInstallObserver = new AppDirObserver(
                 mFrameworkDir.getPath(), OBSERVER_EVENTS, true);
@@ -935,7 +950,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     scanMode | SCAN_NO_DEX, 0);
             
             // Collect all system packages.
-            mSystemAppDir = new File(Environment.getRootDirectory(), "app");
+            mSystemAppDir = new File(Environment.getRootDirectory(), "app");// /system/app
             mSystemInstallObserver = new AppDirObserver(
                 mSystemAppDir.getPath(), OBSERVER_EVENTS, true);
             mSystemInstallObserver.startWatching();
@@ -974,12 +989,13 @@ class PackageManagerService extends IPackageManager.Stub {
                 }
             }
             
-            mAppInstallDir = new File(dataDir, "app");
+            mAppInstallDir = new File(dataDir, "app");   //  /data/app
             if (mInstaller == null) {
                 // Make sure these dirs exist, when we are running in
                 // the simulator.
                 mAppInstallDir.mkdirs(); // scanDirLI() assumes this dir exists
             }
+            //有些没有安装成功的数据记录，，，，需要删除，，，所谓没有安装成功，就是指package-backup.xml里面的package的installStatus为false的应用程序，，
             //look for any incomplete package installations
             ArrayList<PackageSetting> deletePkgsList = mSettings.getListOfIncompleteInstallPackages();
             //clean up list
@@ -987,11 +1003,15 @@ class PackageManagerService extends IPackageManager.Stub {
                 //clean up here
                 cleanupInstallFailedPackage(deletePkgsList.get(i));
             }
+            
+            //删除临时文件，，
             //delete tmp files
             deleteTempPackageFiles();
 
             EventLog.writeEvent(EventLogTags.BOOT_PROGRESS_PMS_DATA_SCAN_START,
                     SystemClock.uptimeMillis());
+                    
+                    //监听和扫描 /data/app下面的apk，，，，之前解析了packages.xml文件的时候有可能已经生成了下面这些apk的PackageSetting对象，现在扫描可以补全很多信息，
             mAppInstallObserver = new AppDirObserver(
                 mAppInstallDir.getPath(), OBSERVER_EVENTS, false);
             mAppInstallObserver.startWatching();
@@ -1021,9 +1041,9 @@ class PackageManagerService extends IPackageManager.Stub {
                     + mSettings.mInternalSdkPlatform + " to " + mSdkVersion
                     + "; regranting permissions for internal storage");
             mSettings.mInternalSdkPlatform = mSdkVersion;
-            
+            //因为系统升级更新权限，，，比如应用程序原先共享了userId，，系统升级后共享的userId的权限发生了变化，，，
             updatePermissionsLP(null, null, true, regrantPermissions, regrantPermissions);
-
+						//将mSettings.mPackages里面的信息重新写回packages.xml，，，，，
             mSettings.writeLP();
 
             EventLog.writeEvent(EventLogTags.BOOT_PROGRESS_PMS_READY,
@@ -1077,7 +1097,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         mSettings.removePackageLP(ps.name);
     }
-
+		//从/system/etc/permissions目录里面的xml文件，执行完后系统就知道设备包含了哪些功能，以及特定的uid包含哪些默认的权限，，，
     void readPermissions() {
         // Read permissions from .../etc/permission directory.
         File libraryDir = new File(Environment.getRootDirectory(), "etc/permissions");
@@ -1114,7 +1134,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 "etc/permissions/platform.xml");
         readPermissionsFromXml(permFile);
     }
-
+		//读取权限信息、共享库信息、设备支持的功能信息，，，
     private void readPermissionsFromXml(File permFile) {
         FileReader permReader = null;
         try {
@@ -1150,6 +1170,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     XmlUtils.skipCurrentTag(parser);
                     continue;
                 } else if ("permission".equals(name)) {
+                	//解析permission标签，，
                     String perm = parser.getAttributeValue(null, "name");
                     if (perm == null) {
                         Slog.w(TAG, "<permission> without name at "
@@ -1158,9 +1179,11 @@ class PackageManagerService extends IPackageManager.Stub {
                         continue;
                     }
                     perm = perm.intern();
+                    //这里面还会解析group标签，，
                     readPermission(parser, perm);
 
                 } else if ("assign-permission".equals(name)) {
+                		//解析assign-permission
                     String perm = parser.getAttributeValue(null, "name");
                     if (perm == null) {
                         Slog.w(TAG, "<assign-permission> without name at "
@@ -1184,6 +1207,10 @@ class PackageManagerService extends IPackageManager.Stub {
                         continue;
                     }
                     perm = perm.intern();
+                    //一个uid可能对应多个系统权限，，，
+                    //    <assign-permission name="android.permission.UPDATE_DEVICE_STATS" uid="media" />
+    								//<assign-permission name="android.permission.UPDATE_APP_OPS_STATS" uid="media" />
+   									// <assign-permission name="com.sonyericsson.permission.CAMERA_EXTENDED" uid="media" />
                     HashSet<String> perms = mSystemPermissions.get(uid);
                     if (perms == null) {
                         perms = new HashSet<String>();
@@ -1193,6 +1220,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     XmlUtils.skipCurrentTag(parser);
 
                 } else if ("library".equals(name)) {
+                	//系统依赖的共享java库，，<library name="android.test.runner" file="/system/framework/android.test.runner.jar" />
                     String lname = parser.getAttributeValue(null, "name");
                     String lfile = parser.getAttributeValue(null, "file");
                     if (lname == null) {
@@ -1234,7 +1262,8 @@ class PackageManagerService extends IPackageManager.Stub {
             Slog.w(TAG, "Got execption parsing permissions.", e);
         }
     }
-
+		//name代表相应的权限，比如，android.permission.WRITE_EXTERNAL_STORAGE
+		//解析权限和对应的gid,然后保存到Settings里面，
     void readPermission(XmlPullParser parser, String name)
             throws IOException, XmlPullParserException {
 
@@ -1247,6 +1276,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         int outerDepth = parser.getDepth();
         int type;
+        //一个permission标签里面可能包含多个group子标签
         while ((type=parser.next()) != XmlPullParser.END_DOCUMENT
                && (type != XmlPullParser.END_TAG
                        || parser.getDepth() > outerDepth)) {
@@ -1257,8 +1287,10 @@ class PackageManagerService extends IPackageManager.Stub {
 
             String tagName = parser.getName();
             if ("group".equals(tagName)) {
+            	//group标签，，，gid的值类似于sdcard_rw
                 String gidStr = parser.getAttributeValue(null, "gid");
                 if (gidStr != null) {
+                		//gid名字到gid数字的转换
                     int gid = Process.getGidForName(gidStr);
                     bp.gids = appendInt(bp.gids, gid);
                 } else {
@@ -1269,7 +1301,7 @@ class PackageManagerService extends IPackageManager.Stub {
             XmlUtils.skipCurrentTag(parser);
         }
     }
-
+		//将整形值加入到数组中，然后返回新的数组
     static int[] appendInt(int[] cur, int val) {
         if (cur == null) {
             return new int[] { val };
@@ -1285,7 +1317,7 @@ class PackageManagerService extends IPackageManager.Stub {
         ret[N] = val;
         return ret;
     }
-
+		//将整形数组加入到数组中，然后返回新的数组
     static int[] appendInts(int[] cur, int[] add) {
         if (add == null) return cur;
         if (cur == null) return add;
@@ -1295,7 +1327,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return cur;
     }
-
+		//从指定的数组中删除指定的值，然后返回新的数组
     static int[] removeInt(int[] cur, int val) {
         if (cur == null) {
             return null;
@@ -1315,7 +1347,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return cur;
     }
-
+//从指定的数组中删除指定的数组，然后返回新的数组
     static int[] removeInts(int[] cur, int[] rem) {
         if (rem == null) return cur;
         if (cur == null) return cur;
@@ -1579,9 +1611,10 @@ class PackageManagerService extends IPackageManager.Stub {
             }
         });
     }
-
+		//获取参数component对应的Activity信息，，
     public ActivityInfo getActivityInfo(ComponentName component, int flags) {
         synchronized (mPackages) {
+        		//mActivities.mActivities里面保存所有的Activity信息，，，
             PackageParser.Activity a = mActivities.mActivities.get(component);
 
             if (Config.LOGV) Log.v(TAG, "getActivityInfo " + component + ": " + a);
@@ -1703,7 +1736,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return PackageManager.PERMISSION_DENIED;
     }
-
+		//检查权限树，，以包分隔符进行分隔，，，
     private BasePermission findPermissionTreeLP(String permName) {
         for(BasePermission bp : mSettings.mPermissionTrees.values()) {
             if (permName.startsWith(bp.name) &&
@@ -1714,7 +1747,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return null;
     }
-
+		//会抛出异常的版本
     private BasePermission checkPermissionTreeLP(String permName) {
         if (permName != null) {
             BasePermission bp = findPermissionTreeLP(permName);
@@ -2063,11 +2096,12 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return null;
     }
-
+		//查询activity
     public List<ResolveInfo> queryIntentActivities(Intent intent,
             String resolvedType, int flags) {
         ComponentName comp = intent.getComponent();
         if (comp != null) {
+        	//显式的
             List<ResolveInfo> list = new ArrayList<ResolveInfo>(1);
             ActivityInfo ai = getActivityInfo(comp, flags);
             if (ai != null) {
@@ -2081,9 +2115,11 @@ class PackageManagerService extends IPackageManager.Stub {
         synchronized (mPackages) {
             String pkgName = intent.getPackage();
             if (pkgName == null) {
+            	//没指定包名
                 return (List<ResolveInfo>)mActivities.queryIntent(intent,
                         resolvedType, flags);
             }
+            //指定包名的，在指定的包里面查找，，，
             PackageParser.Package pkg = mPackages.get(pkgName);
             if (pkg != null) {
                 return (List<ResolveInfo>) mActivities.queryIntentForPackage(intent,
@@ -2542,7 +2578,7 @@ class PackageManagerService extends IPackageManager.Stub {
 
         return finalList;
     }
-
+		//扫描指定目录，
     private void scanDirLI(File dir, int flags, int scanMode, long currentTime) {
         String[] files = dir.list();
         if (files == null) {
@@ -2555,6 +2591,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
 
         int i;
+        //循环扫描目录下面的包，
         for (i=0; i<files.length; i++) {
             File file = new File(dir, files[i]);
             if (!isPackageFilename(files[i])) {
@@ -2625,7 +2662,7 @@ class PackageManagerService extends IPackageManager.Stub {
         return true;
     }
 
-    /*
+    /*扫描包，
      *  Scan a package and return the newly parsed package.
      *  Returns null in case of errors and the error code is stored in mLastScanError
      */
@@ -2773,7 +2810,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return true;
     }
-
+		//提取dex,,,,
     public boolean performDexOpt(String packageName) {
         if (!mNoDexOpt) {
             return false;
@@ -2794,7 +2831,7 @@ class PackageManagerService extends IPackageManager.Stub {
     static final int DEX_OPT_SKIPPED = 0;
     static final int DEX_OPT_PERFORMED = 1;
     static final int DEX_OPT_FAILED = -1;
-
+		//提取dex,,,,,
     private int performDexOptLI(PackageParser.Package pkg, boolean forceDex) {
         boolean performed = false;
         if ((pkg.applicationInfo.flags&ApplicationInfo.FLAG_HAS_CODE) != 0 && mInstaller != null) {
@@ -2802,6 +2839,7 @@ class PackageManagerService extends IPackageManager.Stub {
             int ret = 0;
             try {
                 if (forceDex || dalvik.system.DexFile.isDexOptNeeded(path)) {
+                	//提取dex
                     ret = mInstaller.dexopt(path, pkg.applicationInfo.uid,
                             !isForwardLocked(pkg));
                     pkg.mDidDexOpt = true;
@@ -2859,7 +2897,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         return dataPath;
     }
-    
+    //扫描包，安装包，将包里面的四大组件信息保存起来，，，
     private PackageParser.Package scanPackageLI(PackageParser.Package pkg,
             int parseFlags, int scanMode, long currentTime) {
         File scanFile = new File(pkg.mScanPath);
@@ -2881,6 +2919,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
 
         if (pkg.packageName.equals("android")) {
+        	//解析的包是android
             synchronized (mPackages) {
                 if (mAndroidApplication != null) {
                     Slog.w(TAG, "*************************************************");
@@ -3212,7 +3251,7 @@ class PackageManagerService extends IPackageManager.Stub {
                                         + pkg.applicationInfo.uid + "; old data erased";
                                 reportSettingsProblem(Log.WARN, msg);
                                 recovered = true;
-
+																//重新安装app,,,,
                                 // And now re-install the app.
                                 ret = mInstaller.install(pkgName, useEncryptedFSDir, pkg.applicationInfo.uid,
                                         pkg.applicationInfo.uid);
@@ -3255,6 +3294,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     Log.v(TAG, "Want this data dir: " + dataPath);
                 //invoke installer to do the actual installation
                 if (mInstaller != null) {
+                	  //进行apk的真正安装，，，，，
                     int ret = mInstaller.install(pkgName, useEncryptedFSDir, pkg.applicationInfo.uid,
                             pkg.applicationInfo.uid);
                     if(ret < 0) {
@@ -3340,6 +3380,7 @@ class PackageManagerService extends IPackageManager.Stub {
                      */
                     Slog.i(TAG, "Unpacking native libraries for " + path);
                     mInstaller.unlinkNativeLibraryDirectory(dataPathString);
+                    //释放so文件，，，，
                     NativeLibraryHelper.copyNativeBinariesLI(scanFile, nativeLibraryDir);
                 } else {
                     Slog.i(TAG, "Linking native library dir for " + path);
@@ -3350,6 +3391,7 @@ class PackageManagerService extends IPackageManager.Stub {
             pkg.mScanPath = path;
 
             if ((scanMode&SCAN_NO_DEX) == 0) {
+            			//提取dex文件，，，
                 if (performDexOptLI(pkg, forceDex) == DEX_OPT_FAILED) {
                     mLastScanError = PackageManager.INSTALL_FAILED_DEXOPT;
                     return null;
@@ -3366,6 +3408,7 @@ class PackageManagerService extends IPackageManager.Stub {
         // so that we do not end up in a confused state while the user is still using the older
         // version of the application while the new one gets installed.
         if ((parseFlags & PackageManager.INSTALL_REPLACE_EXISTING) != 0) {
+        	//更新安装，，杀死之前的应用程序，
             killApplication(pkg.applicationInfo.packageName,
                         pkg.applicationInfo.uid);
         }
@@ -3375,8 +3418,12 @@ class PackageManagerService extends IPackageManager.Stub {
             if ((scanMode&SCAN_MONITOR) != 0) {
                 mAppDirs.put(pkg.mPath, pkg);
             }
+            //关联PackageSetting和PackageParser.Package,,,,,
             // Add the new setting to mSettings
             mSettings.insertPackageSettingLP(pkgSetting, pkg);
+            
+            
+            //包名到PackageParser.Package
             // Add the new setting to mPackages
             mPackages.put(pkg.applicationInfo.packageName, pkg);
             // Make sure we don't accidentally delete its data.
@@ -3399,7 +3446,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     pkgSetting.lastUpdateTime = scanFileTime;
                 }
             }
-
+						//处理这个包里面的provider,,系统有俩个数据结构mProvidersByComponent和mProviders保存了所有的provider
             int N = pkg.providers.size();
             StringBuilder r = null;
             int i;
@@ -3407,6 +3454,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 PackageParser.Provider p = pkg.providers.get(i);
                 p.info.processName = fixProcessName(pkg.applicationInfo.processName,
                         p.info.processName, pkg.applicationInfo.uid);
+                //组件为key
                 mProvidersByComponent.put(new ComponentName(p.info.packageName,
                         p.info.name), p);
                 p.syncable = p.info.isSyncable;
@@ -3426,6 +3474,7 @@ class PackageManagerService extends IPackageManager.Stub {
                             p.syncable = false;
                         }
                         if (!mProviders.containsKey(names[j])) {
+                        		//权限名为key,,,,
                             mProviders.put(names[j], p);
                             if (p.info.authority == null) {
                                 p.info.authority = names[j];
@@ -3458,7 +3507,7 @@ class PackageManagerService extends IPackageManager.Stub {
             if (r != null) {
                 if (Config.LOGD) Log.d(TAG, "  Providers: " + r);
             }
-
+						//处理这个包里面的service,,系统有一个数据结构保存了所有的service
             N = pkg.services.size();
             r = null;
             for (i=0; i<N; i++) {
@@ -3478,7 +3527,7 @@ class PackageManagerService extends IPackageManager.Stub {
             if (r != null) {
                 if (Config.LOGD) Log.d(TAG, "  Services: " + r);
             }
-
+						//处理这个包里面的广播,,系统有一个数据结构保存了所有的广播
             N = pkg.receivers.size();
             r = null;
             for (i=0; i<N; i++) {
@@ -3498,7 +3547,7 @@ class PackageManagerService extends IPackageManager.Stub {
             if (r != null) {
                 if (Config.LOGD) Log.d(TAG, "  Receivers: " + r);
             }
-
+						//处理这个包里面的activity,,系统有一个数据结构保存了所有的activity
             N = pkg.activities.size();
             r = null;
             for (i=0; i<N; i++) {
@@ -3518,11 +3567,12 @@ class PackageManagerService extends IPackageManager.Stub {
             if (r != null) {
                 if (Config.LOGD) Log.d(TAG, "  Activities: " + r);
             }
-
+						//处理这个包中定义的权限组，，，，
             N = pkg.permissionGroups.size();
             r = null;
             for (i=0; i<N; i++) {
                 PackageParser.PermissionGroup pg = pkg.permissionGroups.get(i);
+                //权限组的名字到PermissionGroup
                 PackageParser.PermissionGroup cur = mPermissionGroups.get(pg.info.name);
                 if (cur == null) {
                     mPermissionGroups.put(pg.info.name, pg);
@@ -3535,6 +3585,7 @@ class PackageManagerService extends IPackageManager.Stub {
                         r.append(pg.info.name);
                     }
                 } else {
+                	//不同程序定义了相同的权限组，，有可能系统忽略，那么就可能出问题，，，，，，
                     Slog.w(TAG, "Permission group " + pg.info.name + " from package "
                             + pg.info.packageName + " ignored: original from "
                             + cur.info.packageName);
@@ -3552,28 +3603,33 @@ class PackageManagerService extends IPackageManager.Stub {
             if (r != null) {
                 if (Config.LOGD) Log.d(TAG, "  Permission Groups: " + r);
             }
-
+						//处理这个包中定义的权限信息，，，
             N = pkg.permissions.size();
             r = null;
             for (i=0; i<N; i++) {
                 PackageParser.Permission p = pkg.permissions.get(i);
+                //mSettings.mPermissions里面保存系统所有的权限，，，，
                 HashMap<String, BasePermission> permissionMap =
                         p.tree ? mSettings.mPermissionTrees
                         : mSettings.mPermissions;
+                        //字符串形式的到PermissionGroup
                 p.group = mPermissionGroups.get(p.info.group);
                 if (p.info.group == null || p.group != null) {
                     BasePermission bp = permissionMap.get(p.info.name);
                     if (bp == null) {
+                    	//权限名，    定义这个权限的包名，权限的类型，，
                         bp = new BasePermission(p.info.name, p.info.packageName,
                                 BasePermission.TYPE_NORMAL);
                         permissionMap.put(p.info.name, bp);
                     }
+                    //perm对应的是从AndroidManifest文件里面解析出来的，，，也就是说对于同一个权限，用了多个类来进行描述，，现在是将他们关联起来，，
                     if (bp.perm == null) {
                         if (bp.sourcePackage == null
                                 || bp.sourcePackage.equals(p.info.packageName)) {
                             BasePermission tree = findPermissionTreeLP(p.info.name);
                             if (tree == null
                                     || tree.sourcePackage.equals(p.info.packageName)) {
+                                //保存变量值，，，，，，
                                 bp.packageSetting = pkgSetting;
                                 bp.perm = p;
                                 bp.uid = pkg.applicationInfo.uid;
@@ -3617,7 +3673,7 @@ class PackageManagerService extends IPackageManager.Stub {
             if (r != null) {
                 if (Config.LOGD) Log.d(TAG, "  Permissions: " + r);
             }
-
+						//处理这个包的instrumentation，，一般不会有，，
             N = pkg.instrumentation.size();
             r = null;
             for (i=0; i<N; i++) {
@@ -3640,7 +3696,7 @@ class PackageManagerService extends IPackageManager.Stub {
             if (r != null) {
                 if (Config.LOGD) Log.d(TAG, "  Instrumentation: " + r);
             }
-
+						//提取出这个包内的broadcastReceiver信息，所有应用程序的广播接收器都会保存到系统的一个变量里面
             if (pkg.protectedBroadcasts != null) {
                 N = pkg.protectedBroadcasts.size();
                 for (i=0; i<N; i++) {
@@ -4073,7 +4129,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
         ps.haveGids = true;
     }
-    
+    //保存系统所有的Activity
     private final class ActivityIntentResolver
             extends IntentResolver<PackageParser.ActivityIntentInfo, ResolveInfo> {
         public List queryIntent(Intent intent, String resolvedType, boolean defaultOnly) {
@@ -4154,6 +4210,7 @@ class PackageManagerService extends IPackageManager.Stub {
         @Override
         protected boolean allowFilterResult(
                 PackageParser.ActivityIntentInfo filter, List<ResolveInfo> dest) {
+            //是否允许filter对应的Activity添加到dest
             ActivityInfo filterAi = filter.activity.info;
             for (int i=dest.size()-1; i>=0; i--) {
                 ActivityInfo destAi = dest.get(i).activityInfo;
@@ -4228,6 +4285,7 @@ class PackageManagerService extends IPackageManager.Stub {
 //        }
 
         // Keys are String (activity class name), values are Activity.
+        //key是组件名，value是Activity信息，，，保存系统所有的Activity,,,
         private final HashMap<ComponentName, PackageParser.Activity> mActivities
                 = new HashMap<ComponentName, PackageParser.Activity>();
         private int mFlags;
@@ -4573,13 +4631,13 @@ class PackageManagerService extends IPackageManager.Stub {
         private final String mRootDir;
         private final boolean mIsRom;
     }
-
+		//安装应用程序，
     /* Called when a downloaded package installation has been confirmed by the user */
     public void installPackage(
             final Uri packageURI, final IPackageInstallObserver observer, final int flags) {
         installPackage(packageURI, observer, flags, null);
     }
-
+		//安装应用程序，，，
     /* Called when a downloaded package installation has been confirmed by the user */
     public void installPackage(
             final Uri packageURI, final IPackageInstallObserver observer, final int flags,
@@ -4598,7 +4656,7 @@ class PackageManagerService extends IPackageManager.Stub {
         Message msg = mHandler.obtainMessage(POST_INSTALL, token, 0);
         mHandler.sendMessage(msg);
     }
-
+		//apk复制后的处理，，，
     private void processPendingInstall(final InstallArgs args, final int currentStatus) {
         // Queue up an async operation since the package installation may take a little while.
         mHandler.post(new Runnable() {
@@ -4613,6 +4671,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 if (res.returnCode == PackageManager.INSTALL_SUCCEEDED) {
                     args.doPreInstall(res.returnCode);
                     synchronized (mInstallLock) {
+                    	//扫描指定包，，
                         installPackageLI(args, true, res);
                     }
                     args.doPostInstall(res.returnCode);
@@ -4671,7 +4730,7 @@ class PackageManagerService extends IPackageManager.Stub {
             }
         });
     }
-
+		//程序文件的复制，
     abstract class HandlerParams {
         final static int MAX_RETRIES = 4;
         int retry = 0;
@@ -4705,7 +4764,7 @@ class PackageManagerService extends IPackageManager.Stub {
         abstract void handleServiceError();
         abstract void handleReturnCode();
     }
-
+		//重新安装
     class InstallParams extends HandlerParams {
         final IPackageInstallObserver observer;
         int flags;
@@ -4770,7 +4829,7 @@ class PackageManagerService extends IPackageManager.Stub {
             return pkgLite.recommendedInstallLocation;
         }
 
-        /*
+        /*获取安装位置信息等，，，
          * Invoke remote method to get package information and install
          * location values. Override install location based on default
          * policy if needed and then create install arguments based
@@ -4793,10 +4852,13 @@ class PackageManagerService extends IPackageManager.Stub {
                 // Remote call to find out default install location
                 final PackageInfoLite pkgLite;
                 try {
+                	//授予权限，，，，
                     mContext.grantUriPermission(DEFAULT_CONTAINER_PACKAGE, packageURI,
                             Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            //远程调用，，，询问是否能够安装指定的apk
                     pkgLite = mContainerService.getMinimalPackageInfo(packageURI, flags);
                 } finally {
+                	//撤销权限，，
                     mContext.revokeUriPermission(packageURI, Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 }
 
@@ -4834,6 +4896,7 @@ class PackageManagerService extends IPackageManager.Stub {
             if (ret == PackageManager.INSTALL_SUCCEEDED) {
                 // Create copy only if we are not in an erroneous state.
                 // Remote call to initiate copy using temporary file
+                //远程调用进行文件复制，，，将apk复制到指定的目录，，之前创建PMS的时候会监听特定的目录，一旦发现有新的apk,,那么会扫描解析那个包，
                 ret = mArgs.copyApk(mContainerService, true);
             }
             mRet = ret;
@@ -4856,7 +4919,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
     }
 
-    /*
+    /*移动复制，，，内部存储和外部存储之间的移动，
      * Utility class used in movePackage api.
      * srcArgs and targetArgs are not set for invalid flags and make
      * sure to do null checks when invoking methods on them.
@@ -4958,7 +5021,7 @@ class PackageManagerService extends IPackageManager.Stub {
         final IPackageInstallObserver observer;
         // Always refers to PackageManager flags only
         final int flags;
-        final Uri packageURI;
+        final Uri packageURI;//标识安装程序的路径，，
         final String installerPackageName;
 
         InstallArgs(Uri packageURI,
@@ -4983,7 +5046,7 @@ class PackageManagerService extends IPackageManager.Stub {
         abstract boolean doPostDeleteLI(boolean delete);
         abstract boolean checkFreeStorage(IMediaContainerService imcs) throws RemoteException;
     }
-
+		//安装到内部存储区
     class FileInstallArgs extends InstallArgs {
         File installDir;
         String codeFileName;
@@ -5029,7 +5092,7 @@ class PackageManagerService extends IPackageManager.Stub {
         }
 
         void createCopyFile() {
-            installDir = isFwdLocked() ? mDrmAppPrivateInstallDir : mAppInstallDir;
+            installDir = isFwdLocked() ? mDrmAppPrivateInstallDir : mAppInstallDir;// /data/app
             codeFileName = createTempPackageFile(installDir).getPath();
             resourceFileName = getResourcePathFromCodePath();
             created = true;
@@ -5067,6 +5130,7 @@ class PackageManagerService extends IPackageManager.Stub {
             try {
                 mContext.grantUriPermission(DEFAULT_CONTAINER_PACKAGE, packageURI,
                         Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        //文件复制等工作，，，
                 if (imcs.copyResource(packageURI, out)) {
                     ret = PackageManager.INSTALL_SUCCEEDED;
                 }
@@ -5202,7 +5266,7 @@ class PackageManagerService extends IPackageManager.Stub {
             return (flags & PackageManager.INSTALL_FORWARD_LOCK) != 0;
         }
     }
-
+		//安装到外部存储区
     class SdInstallArgs extends InstallArgs {
         static final String RES_FILE_NAME = "pkg.apk";
 
@@ -7341,25 +7405,25 @@ class PackageManagerService extends IPackageManager.Stub {
             }
         }
     }
-
+		//对于某一种权限的描述，，比如android.permission.WRITE_EXTERNAL_STORAGE
     static final class BasePermission {
         final static int TYPE_NORMAL = 0;
         final static int TYPE_BUILTIN = 1;
         final static int TYPE_DYNAMIC = 2;
 
         final String name;
-        String sourcePackage;
+        String sourcePackage;//有可能为null
         PackageSettingBase packageSetting;
         final int type;
         int protectionLevel;
         PackageParser.Permission perm;
         PermissionInfo pendingInfo;
         int uid;
-        int[] gids;
+        int[] gids;//这个权限映射到的gid
 
         BasePermission(String _name, String _sourcePackage, int _type) {
-            name = _name;
-            sourcePackage = _sourcePackage;
+            name = _name;//权限名
+            sourcePackage = _sourcePackage;//定义这个权限的包名，，，
             type = _type;
             // Default to most conservative protection level.
             protectionLevel = PermissionInfo.PROTECTION_SIGNATURE;
@@ -7511,7 +7575,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 mSignatures = newSigs;
             }
         }
-
+				//只是复制而已，，，
         private void assignSignatures(Signature[] sigs) {
             if (sigs == null) {
                 mSignatures = null;
@@ -7708,7 +7772,7 @@ class PackageManagerService extends IPackageManager.Stub {
 
     static class GrantedPermissions {
         int pkgFlags;
-
+				//已经获得的权限，，，
         HashSet<String> grantedPermissions = new HashSet<String>();
         int[] gids;
 
@@ -7757,9 +7821,9 @@ class PackageManagerService extends IPackageManager.Stub {
         boolean permissionsFixed;
         boolean haveGids;
 
-        /* Explicitly disabled components */
+        /* Explicitly disabled components 某个包里面显式禁用的组件列表*/
         HashSet<String> disabledComponents = new HashSet<String>(0);
-        /* Explicitly enabled components */
+        /* Explicitly enabled components 某个包里面显式启用的组件列表*/
         HashSet<String> enabledComponents = new HashSet<String>(0);
         int enabled = COMPONENT_ENABLED_STATE_DEFAULT;
         int installStatus = PKG_INSTALL_COMPLETE;
@@ -7926,13 +7990,15 @@ class PackageManagerService extends IPackageManager.Stub {
         }
     }
 
-    /**
+    /**特定共享用户id的设置信息，
      * Settings data for a particular shared user ID we know about.
      */
     static final class SharedUserSetting extends GrantedPermissions {
         final String name;
         int userId;
+        //保存了哪些包共用了这个用户，
         final HashSet<PackageSetting> packages = new HashSet<PackageSetting>();
+        //签名信息，，
         final PackageSignatures signatures = new PackageSignatures();
 
         SharedUserSetting(String _name, int _pkgFlags) {
@@ -7948,18 +8014,19 @@ class PackageManagerService extends IPackageManager.Stub {
         }
     }
 
-    /**
+    /**整个PMS只有一个这个类的对象，
      * Holds information about dynamic settings.
      */
     private static final class Settings {
-        private final File mSettingsFilename;
-        private final File mBackupSettingsFilename;
-        private final File mPackageListFilename;
+        private final File mSettingsFilename;// /data/system/packages.xml
+        private final File mBackupSettingsFilename;//  /data/system/packages-backup.xml
+        private final File mPackageListFilename;//  /data/system/packages.list  这个文件的每一行包含四项信息，第一项是包名，第二项是linux用户id,第三项标识是否可以调试，第四项标识数据文件的目录
+        //key是包名，
         private final HashMap<String, PackageSetting> mPackages =
-                new HashMap<String, PackageSetting>();
+                new HashMap<String, PackageSetting>();//这里主要来自于packages.xml文件的解析
         // List of replaced system applications
         final HashMap<String, PackageSetting> mDisabledSysPackages =
-            new HashMap<String, PackageSetting>();
+            new HashMap<String, PackageSetting>();//保存没有通过标准卸载方式卸载的程序
 
         // These are the last platform API version we were using for
         // the apps installed on internal and external storage.  It is
@@ -7993,16 +8060,17 @@ class PackageManagerService extends IPackageManager.Stub {
                 }
             }
         };
+        //key是字符串形式的共享用户信息，比如android.uid.system
         private final HashMap<String, SharedUserSetting> mSharedUsers =
-                new HashMap<String, SharedUserSetting>();
-        private final ArrayList<Object> mUserIds = new ArrayList<Object>();
+                new HashMap<String, SharedUserSetting>();//保存共享id的相关信息，来自于packages.xml里面的shared-user标签
+        private final ArrayList<Object> mUserIds = new ArrayList<Object>();//所有用户id，，里面有可能有空值，下标是uid基于一个应用程序uid起始值（FIRST_APPLICATION_UID）的偏移
         private final SparseArray<Object> mOtherUserIds =
-                new SparseArray<Object>();
-
+                new SparseArray<Object>();//暂未使用，，不是应用程序类别的uid,没有基于偏移，，
+				//保存所有签名
         // For reading/writing settings file.
         private final ArrayList<Signature> mPastSignatures =
                 new ArrayList<Signature>();
-
+				//保存所有权限，key是类似于android.permission.WRITE_EXTERNAL_STORAGE
         // Mapping from permission names to info about them.
         final HashMap<String, BasePermission> mPermissions =
                 new HashMap<String, BasePermission>();
@@ -8010,7 +8078,7 @@ class PackageManagerService extends IPackageManager.Stub {
         // Mapping from permission tree names to info about them.
         final HashMap<String, BasePermission> mPermissionTrees =
                 new HashMap<String, BasePermission>();
-
+				//保存packages.xml里面cleaning-package标签的信息
         // Packages that have been uninstalled and still need their external
         // storage data deleted.
         final ArrayList<String> mPackagesToBeCleaned = new ArrayList<String>();
@@ -8033,16 +8101,18 @@ class PackageManagerService extends IPackageManager.Stub {
                 this.sharedId = sharedId;
             }
         }
+        //当PMS解析packages.xml，如果发现某个package标签下面有shareUserId，那么会暂时把该package放在这里，直到解析完毕shared-user标签后，再来完善这些package
         private final ArrayList<PendingPackage> mPendingPackages
                 = new ArrayList<PendingPackage>();
-
+				//构造函数
         Settings() {
-            File dataDir = Environment.getDataDirectory();
-            File systemDir = new File(dataDir, "system");
+            File dataDir = Environment.getDataDirectory();  //  /data
+            File systemDir = new File(dataDir, "system");  //  /data/system
             // TODO(oam): This secure dir creation needs to be moved somewhere else (later)
-            File systemSecureDir = new File(dataDir, "secure/system");
+            File systemSecureDir = new File(dataDir, "secure/system");   // /data/secure/system
             systemDir.mkdirs();
             systemSecureDir.mkdirs();
+            //设置文件的权限，，，
             FileUtils.setPermissions(systemDir.toString(),
                     FileUtils.S_IRWXU|FileUtils.S_IRWXG
                     |FileUtils.S_IROTH|FileUtils.S_IXOTH,
@@ -8051,9 +8121,9 @@ class PackageManagerService extends IPackageManager.Stub {
                     FileUtils.S_IRWXU|FileUtils.S_IRWXG
                     |FileUtils.S_IROTH|FileUtils.S_IXOTH,
                     -1, -1);
-            mSettingsFilename = new File(systemDir, "packages.xml");
-            mBackupSettingsFilename = new File(systemDir, "packages-backup.xml");
-            mPackageListFilename = new File(systemDir, "packages.list");
+            mSettingsFilename = new File(systemDir, "packages.xml");   // /data/system/packages.xml
+            mBackupSettingsFilename = new File(systemDir, "packages-backup.xml"); //  /data/system/packages-backup.xml
+            mPackageListFilename = new File(systemDir, "packages.list");  //  /data/system/packages.list
         }
 
         PackageSetting getPackageLP(PackageParser.Package pkg, PackageSetting origPackage,
@@ -8170,7 +8240,7 @@ class PackageManagerService extends IPackageManager.Stub {
             mDisabledSysPackages.remove(name);
             return ret;
         }
-
+				//参数name是包名，，
         PackageSetting addPackageLP(String name, String realName, File codePath, File resourcePath,
                 String nativeLibraryPathString, int uid, int vc, int pkgFlags) {
             PackageSetting p = mPackages.get(name);
@@ -8191,8 +8261,9 @@ class PackageManagerService extends IPackageManager.Stub {
             }
             return null;
         }
-
+				//参数name代表字符串形式的共享id信息，如android.uid.system
         SharedUserSetting addSharedUserLP(String name, int uid, int pkgFlags) {
+        	//只会保留第一个，，，，，
             SharedUserSetting s = mSharedUsers.get(name);
             if (s != null) {
                 if (s.userId == uid) {
@@ -8235,7 +8306,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 }
             }
         }
-        
+        //参数name代表的是包名，
         private PackageSetting getPackageLP(String name, PackageSetting origPackage,
                 String realName, SharedUserSetting sharedUser, File codePath, File resourcePath,
                 String nativeLibraryPathString, int vc, int pkgFlags, boolean create, boolean add) {
@@ -8281,6 +8352,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 }
             }
             if (p == null) {
+            	//第一次走这个，，，，，
                 // Create a new PackageSettings entry. this can end up here because
                 // of code path mismatch or user id mismatch of an updated system partition
                 if (!create) {
@@ -8310,11 +8382,14 @@ class PackageManagerService extends IPackageManager.Stub {
                     p.setTimeStamp(codePath.lastModified());
                     p.sharedUser = sharedUser;
                     if (sharedUser != null) {
+                    	//这个应用程序和其他应用程序共享userId了，
                         p.userId = sharedUser.userId;
                     } else if (MULTIPLE_APPLICATION_UIDS) {
+                    	//主要是构造userId,,,,
                         // Clone the setting here for disabled system packages
                         PackageSetting dis = mDisabledSysPackages.get(name);
                         if (dis != null) {
+                        		//一般都不会满足这个，，，，
                             // For disabled packages a new setting is created
                             // from the existing user id. This still has to be
                             // added to list of user id's
@@ -8331,6 +8406,7 @@ class PackageManagerService extends IPackageManager.Stub {
                             // Add new setting to list of user ids
                             addUserIdLP(p.userId, p, name);
                         } else {
+                        		//重新分配一个userId，，，，
                             // Assign new user id
                             p.userId = newUserIdLP(p);
                         }
@@ -8351,12 +8427,13 @@ class PackageManagerService extends IPackageManager.Stub {
             }
             return p;
         }
-
+				//将这俩个对象进行关联，，并且适当更新PackageSetting
         private void insertPackageSettingLP(PackageSetting p, PackageParser.Package pkg) {
             p.pkg = pkg;
             pkg.mSetEnabled = p.enabled;
             final String codePath = pkg.applicationInfo.sourceDir;
             final String resourcePath = pkg.applicationInfo.publicSourceDir;
+            //更新代码路径 pkg才是最准的
             // Update code path if needed
             if (!codePath.equalsIgnoreCase(p.codePathString)) {
                 Slog.w(TAG, "Code path for pkg : " + p.pkg.packageName +
@@ -8364,6 +8441,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 p.codePath = new File(codePath);
                 p.codePathString = codePath;
             }
+            //更新资源路径，，
             //Update resource path if needed
             if (!resourcePath.equalsIgnoreCase(p.resourcePathString)) {
                 Slog.w(TAG, "Resource path for pkg : " + p.pkg.packageName +
@@ -8371,6 +8449,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 p.resourcePath = new File(resourcePath);
                 p.resourcePathString = resourcePath;
             }
+            //更新本地库路径，，
             // Update the native library path if needed
             final String nativeLibraryPath = pkg.applicationInfo.nativeLibraryDir;
             if (nativeLibraryPath != null
@@ -8381,22 +8460,26 @@ class PackageManagerService extends IPackageManager.Stub {
              if (pkg.mVersionCode != p.versionCode) {
                 p.versionCode = pkg.mVersionCode;
             }
+            //更新签名，，
              // Update signatures if needed.
              if (p.signatures.mSignatures == null) {
+             			//只是把签名复制，
                  p.signatures.assignSignatures(pkg.mSignatures);
              }
              // If this app defines a shared user id initialize
              // the shared user signatures as well.
              if (p.sharedUser != null && p.sharedUser.signatures.mSignatures == null) {
+             	//只是把签名复制，
                  p.sharedUser.signatures.assignSignatures(pkg.mSignatures);
              }
             addPackageSettingLP(p, pkg.packageName, p.sharedUser);
         }
-
+				//保存PackageSetting到mPackages,,,,不同的应用程序有不同的PackageSetting，PMS有一个数据结构保存所有应用程序的PackageSetting信息，，
         // Utility method that adds a PackageSetting to mPackages and
         // completes updating the shared user attributes
         private void addPackageSettingLP(PackageSetting p, String name,
                 SharedUserSetting sharedUser) {
+                	//保存PackageSetting信息，name是包名，，，
             mPackages.put(name, p);
             if (sharedUser != null) {
                 if (p.sharedUser != null && p.sharedUser != sharedUser) {
@@ -8412,7 +8495,7 @@ class PackageManagerService extends IPackageManager.Stub {
                         + " with id " + sharedUser.userId
                         + "; I am not changing its files so it will probably fail!");
                 }
-
+								//有哪些PackageSetting公用了这个userId,,,
                 sharedUser.packages.add(p);
                 p.sharedUser = sharedUser;
                 p.userId = sharedUser.userId;
@@ -8498,8 +8581,9 @@ class PackageManagerService extends IPackageManager.Stub {
             }
             mPackages.put(name, newp);
         }
-
+				//参数obj有可能是PackageSetting  参数name有可能对应uid的字符串形式，比如android.uid.system
         private boolean addUserIdLP(int uid, Object obj, Object name) {
+        		//超出范围了，，，
             if (uid >= FIRST_APPLICATION_UID + MAX_APPLICATION_UIDS) {
                 return false;
             }
@@ -8941,6 +9025,7 @@ class PackageManagerService extends IPackageManager.Stub {
             FileInputStream str = null;
             if (mBackupSettingsFilename.exists()) {
                 try {
+                	//     /data/system/packages-backup.xml
                     str = new FileInputStream(mBackupSettingsFilename);
                     mReadMessages.append("Reading from backup settings file\n");
                     reportSettingsProblem(Log.INFO, "Need to read from backup settings file");
@@ -8965,6 +9050,7 @@ class PackageManagerService extends IPackageManager.Stub {
                         reportSettingsProblem(Log.INFO, "No settings file; creating initial state");
                         return false;
                     }
+                    //     /data/system/packages.xml
                     str = new FileInputStream(mSettingsFilename);
                 }
                 XmlPullParser parser = Xml.newPullParser();
@@ -8993,12 +9079,15 @@ class PackageManagerService extends IPackageManager.Stub {
 
                     String tagName = parser.getName();
                     if (tagName.equals("package")) {
+                    	//一个package代表一个应用程序，，
                         readPackageLP(parser);
                     } else if (tagName.equals("permissions")) {
+                    	//permissions标签包含所有的权限(包括framework定义的权限和应用程序自定义的权限)
                         readPermissionsLP(mPermissions, parser);
                     } else if (tagName.equals("permission-trees")) {
                         readPermissionsLP(mPermissionTrees, parser);
                     } else if (tagName.equals("shared-user")) {
+                    	//共享用户对应的信息，，
                         readSharedUserLP(parser);
                     } else if (tagName.equals("preferred-packages")) {
                         // no longer used.
@@ -9050,12 +9139,13 @@ class PackageManagerService extends IPackageManager.Stub {
                 Slog.e(TAG, "Error reading package manager settings", e);
 
             }
-
+						//之前有应用程序共享了userId
             int N = mPendingPackages.size();
             for (int i=0; i<N; i++) {
                 final PendingPackage pp = mPendingPackages.get(i);
                 Object idObj = getUserIdLP(pp.sharedId);
                 if (idObj != null && idObj instanceof SharedUserSetting) {
+                	//pp.name代表的是包名，第二个参数是null
                     PackageSetting p = getPackageLP(pp.name, null, pp.realName,
                             (SharedUserSetting) idObj, pp.codePath, pp.resourcePath,
                             pp.nativeLibraryPathString, pp.versionCode, pp.pkgFlags, true, true);
@@ -9117,7 +9207,7 @@ class PackageManagerService extends IPackageManager.Stub {
             }
             return defValue;
         }
-
+				//解析permissions标签
         private void readPermissionsLP(HashMap<String, BasePermission> out,
                 XmlPullParser parser)
                 throws IOException, XmlPullParserException {
@@ -9253,7 +9343,7 @@ class PackageManagerService extends IPackageManager.Stub {
             }
             mDisabledSysPackages.put(name, ps);
         }
-
+				//解析package标签，一个package标签代表一个应用程序，
         private void readPackageLP(XmlPullParser parser)
                 throws XmlPullParserException, IOException {
             String name = null;
@@ -9355,6 +9445,7 @@ class PackageManagerService extends IPackageManager.Stub {
                             "Error in package manager settings: <package> has no codePath at "
                             + parser.getPositionDescription());
                 } else if (userId > 0) {
+                		//这是一个普通的应用程序，并没有和其他应用程序共享userId
                     packageSetting = addPackageLP(name.intern(), realName, new File(codePathStr),
                             new File(resourcePathStr), nativeLibraryPathStr, userId, versionCode,
                             pkgFlags);
@@ -9371,6 +9462,7 @@ class PackageManagerService extends IPackageManager.Stub {
                         packageSetting.lastUpdateTime = lastUpdateTime;
                     }
                 } else if (sharedIdStr != null) {
+                	//说明这是应用程序和其他应用程序共享userId,,会生成一个PendingPackage,,等会解析shared-user标签后再解析这种，，
                     userId = sharedIdStr != null
                             ? Integer.parseInt(sharedIdStr) : 0;
                     if (userId > 0) {
@@ -9380,6 +9472,8 @@ class PackageManagerService extends IPackageManager.Stub {
                         packageSetting.setTimeStamp(timeStamp);
                         packageSetting.firstInstallTime = firstInstallTime;
                         packageSetting.lastUpdateTime = lastUpdateTime;
+                        
+                        //将构造好的PendingPackage保存起来，
                         mPendingPackages.add((PendingPackage) packageSetting);
                         if (DEBUG_SETTINGS) Log.i(TAG, "Reading package " + name
                                 + ": sharedUserId=" + userId + " pkg="
@@ -9431,7 +9525,7 @@ class PackageManagerService extends IPackageManager.Stub {
                         packageSetting.installStatus = PKG_INSTALL_COMPLETE;
                     }
                 }
-
+								//收集这个应用程序的其他信息，比如哪个组件启用，哪个组件禁用
                 int outerDepth = parser.getDepth();
                 int type;
                 while ((type=parser.next()) != XmlPullParser.END_DOCUMENT
@@ -9450,6 +9544,7 @@ class PackageManagerService extends IPackageManager.Stub {
                     } else if (tagName.equals("sigs")) {
                         packageSetting.signatures.readXml(parser, mPastSignatures);
                     } else if (tagName.equals("perms")) {
+                    	//这个应用程序申请的权限，，，
                         readGrantedPermissionsLP(parser,
                                 packageSetting.grantedPermissions);
                         packageSetting.permissionsFixed = true;
@@ -9528,12 +9623,13 @@ class PackageManagerService extends IPackageManager.Stub {
                 XmlUtils.skipCurrentTag(parser);
             }
         }
-
+				//解析shared-user标签
         private void readSharedUserLP(XmlPullParser parser)
                 throws XmlPullParserException, IOException {
             String name = null;
             String idStr = null;
             int pkgFlags = 0;
+            //构造一个共享用户的信息，
             SharedUserSetting su = null;
             try {
                 name = parser.getAttributeValue(null, "name");
@@ -9552,6 +9648,7 @@ class PackageManagerService extends IPackageManager.Stub {
                             + name + " has bad userId " + idStr + " at "
                             + parser.getPositionDescription());
                 } else {
+                	//
                     if ((su=addSharedUserLP(name.intern(), userId, pkgFlags)) == null) {
                         reportSettingsProblem(Log.ERROR,
                                 "Occurred while parsing settings at "
@@ -9593,7 +9690,7 @@ class PackageManagerService extends IPackageManager.Stub {
                 XmlUtils.skipCurrentTag(parser);
             }
         }
-
+				//读取申请的权限，，，
         private void readGrantedPermissionsLP(XmlPullParser parser,
                 HashSet<String> outPerms) throws IOException, XmlPullParserException {
             int outerDepth = parser.getDepth();
@@ -9683,11 +9780,13 @@ class PackageManagerService extends IPackageManager.Stub {
                 return ps;
             }
         }
-
+				//不同粒度控制是否禁用，，，
         boolean isEnabledLP(ComponentInfo componentInfo, int flags) {
             if ((flags&PackageManager.GET_DISABLED_COMPONENTS) != 0) {
+            		//允许获取禁用的组件，，
                 return true;
             }
+            //找到包设置PackageSetting
             final PackageSetting packageSettings = mPackages.get(componentInfo.packageName);
             if (Config.LOGV) {
                 Log.v(TAG, "isEnabledLock - packageName = " + componentInfo.packageName
@@ -9705,14 +9804,17 @@ class PackageManagerService extends IPackageManager.Stub {
                 }
                 return false;
             }
+            //对应的包是否禁用，，，
             if (packageSettings.enabled == COMPONENT_ENABLED_STATE_DISABLED
                     || (packageSettings.pkg != null && !packageSettings.pkg.applicationInfo.enabled
                             && packageSettings.enabled == COMPONENT_ENABLED_STATE_DEFAULT)) {
                 return false;
             }
+            //组件是否显式启用，，，
             if (packageSettings.enabledComponents.contains(componentInfo.name)) {
                 return true;
             }
+            //这个包里显式禁用的组件
             if (packageSettings.disabledComponents.contains(componentInfo.name)) {
                 return false;
             }

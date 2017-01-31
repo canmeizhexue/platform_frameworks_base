@@ -594,7 +594,7 @@ public class Process {
      */
     public static final native int getUidForName(String name);
     
-    /**
+    /**gid名字到gid数字的转换，比如sdcard_rw----1001（这个数字乱写的）
      * Returns the GID assigned to a particular user name, or -1 if there is
      * none.  If the given string consists of only numbers, it is converted
      * directly to a gid.

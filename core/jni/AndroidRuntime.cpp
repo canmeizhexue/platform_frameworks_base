@@ -46,6 +46,8 @@
 
 
 using namespace android;
+//extern 关键字表明这些函数在其他地方定义了。
+
 
 extern void register_BindTest();
 
@@ -172,6 +174,8 @@ extern int register_android_view_MotionEvent(JNIEnv* env);
 extern int register_android_content_res_ObbScanner(JNIEnv* env);
 extern int register_android_content_res_Configuration(JNIEnv* env);
 
+
+//整个进程只保留一个实例，
 static AndroidRuntime* gCurRuntime = NULL;
 
 static void doThrow(JNIEnv* env, const char* exc, const char* msg = NULL)
@@ -227,7 +231,7 @@ static JNINativeMethod gMethods[] = {
     { "getQwertyKeyboard", "()I",
         (void*) com_android_internal_os_RuntimeInit_getQwertyKeyboard },
 };
-
+//注册RuntimeInit类的jni函数，也就是将java层的函数和c层的函数进行关联，
 int register_com_android_internal_os_RuntimeInit(JNIEnv* env)
 {
     return jniRegisterNativeMethods(env, "com/android/internal/os/RuntimeInit",
@@ -238,7 +242,7 @@ int register_com_android_internal_os_RuntimeInit(JNIEnv* env)
 
 /*static*/ JavaVM* AndroidRuntime::mJavaVM = NULL;
 
-
+//构造函数，
 AndroidRuntime::AndroidRuntime()
 {
     SkGraphics::Init();
@@ -259,13 +263,13 @@ AndroidRuntime::AndroidRuntime()
     assert(gCurRuntime == NULL);        // one per process
     gCurRuntime = this;
 }
-
+//析构函数
 AndroidRuntime::~AndroidRuntime()
 {
     SkGraphics::Term();
 }
 
-/*
+/*注册jni函数，
  * Register native methods using JNI.
  */
 /*static*/ int AndroidRuntime::registerNativeMethods(JNIEnv* env,
@@ -274,7 +278,7 @@ AndroidRuntime::~AndroidRuntime()
     return jniRegisterNativeMethods(env, className, gMethods, numMethods);
 }
 
-/*
+/*调用指定类的指定方法，主要是调用java层方法，
  * Call a static Java Programming Language function that takes no arguments and returns void.
  */
 status_t AndroidRuntime::callStatic(const char* className, const char* methodName)
@@ -456,7 +460,7 @@ static void runtime_vfprintf(FILE* fp, const char* format, va_list ap)
 }
 
 
-/**
+/**返回消耗了多少个参数，-Xzygote /system/bin --zygote --start-system-server
  * Add VM arguments to the to-be-executed VM
  * Stops at first non '-' argument (also stops at an argument of '--')
  * Returns the number of args consumed
@@ -480,7 +484,7 @@ int AndroidRuntime::addVmArguments(int argc, const char* const argv[])
     }
     return i;
 }
-
+//是否存在指定目录
 static int hasDir(const char* dir)
 {
     struct stat s;
@@ -557,7 +561,7 @@ void AndroidRuntime::parseExtraOpts(char* extraOptsBuf)
     }
 }
 
-/*
+/*启动Dalvik虚拟机，成功的时候返回0，这个地方要注意，俩个参数都是出参，
  * Start the Dalvik Virtual Machine.
  *
  * Various arguments, most determined by system properties, are passed in.
@@ -736,6 +740,8 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv)
         /* set a cap on JNI global references */
         opt.optionString = "-Xjnigreflimit:2000";
         mOptions.add(opt);
+        
+        //mOptions的类型是vector,这个地方的add函数是值传递？？？？不然怎么会对于同一个对象多次调用add
 
         /* with -Xcheck:jni, this provides a JNI function call trace */
         //opt.optionString = "-verbose:jni";
@@ -856,7 +862,7 @@ int AndroidRuntime::startVm(JavaVM** pJavaVM, JNIEnv** pEnv)
     initArgs.nOptions = mOptions.size();
     initArgs.ignoreUnrecognized = JNI_FALSE;
 
-    /*
+    /*初始化虚拟机，
      * Initialize the VM.
      *
      * The JavaVM* is essentially per-process, and the JNIEnv* is per-thread.
@@ -875,7 +881,7 @@ bail:
     return result;
 }
 
-/*
+/*启动android运行时环境，包括启动虚拟机和调用className指定的类名的main方法
  * Start the Android runtime.  This involves starting the virtual machine
  * and calling the "static void main(String[] args)" method in the class
  * named by "className".
@@ -914,12 +920,13 @@ void AndroidRuntime::start(const char* className, const bool startSystemServer)
 
     //const char* kernelHack = getenv("LD_ASSUME_KERNEL");
     //LOGD("Found LD_ASSUME_KERNEL='%s'\n", kernelHack);
-
+		//启动虚拟机,注意这俩个参数都是传出的，需要这个函数里面赋值的，
     /* start the virtual machine */
+    //这个mJavaVM是静态成员变量，
     if (startVm(&mJavaVM, &env) != 0)
         goto bail;
 
-    /*
+    /*注册android函数
      * Register android functions.
      */
     if (startReg(env) < 0) {
@@ -927,7 +934,7 @@ void AndroidRuntime::start(const char* className, const bool startSystemServer)
         goto bail;
     }
 
-    /*
+    /*下面这一段就是为了调用入口类的main方法，
      * We want to call main() with a String array with arguments in it.
      * At present we only have one argument, the class name.  Create an
      * array to hold it.
@@ -936,16 +943,21 @@ void AndroidRuntime::start(const char* className, const bool startSystemServer)
     jobjectArray strArray;
     jstring classNameStr;
     jstring startSystemServerStr;
-
+		
+		//加载String类，
     stringClass = env->FindClass("java/lang/String");
     assert(stringClass != NULL);
+    //new对象
     strArray = env->NewObjectArray(2, stringClass, NULL);
     assert(strArray != NULL);
+    //字符串转换，
     classNameStr = env->NewStringUTF(className);
     assert(classNameStr != NULL);
+    //设置数组元素值，
     env->SetObjectArrayElement(strArray, 0, classNameStr);
     startSystemServerStr = env->NewStringUTF(startSystemServer ? 
                                                  "true" : "false");
+    //设置数组元素值，，
     env->SetObjectArrayElement(strArray, 1, startSystemServerStr);
 
     /*
@@ -954,23 +966,27 @@ void AndroidRuntime::start(const char* className, const bool startSystemServer)
      */
     jclass startClass;
     jmethodID startMeth;
+    
+    //字符串转换，比如包名分隔符要变成斜杠
 
     slashClassName = strdup(className);
     for (cp = slashClassName; *cp != '\0'; cp++)
         if (*cp == '.')
             *cp = '/';
-
+		//找到要加载的类，
     startClass = env->FindClass(slashClassName);
     if (startClass == NULL) {
         LOGE("JavaVM unable to locate class '%s'\n", slashClassName);
         /* keep going */
     } else {
+    		//找到main方法，
         startMeth = env->GetStaticMethodID(startClass, "main",
             "([Ljava/lang/String;)V");
         if (startMeth == NULL) {
             LOGE("JavaVM unable to find main() in '%s'\n", className);
             /* keep going */
         } else {
+        		//调用main方法，
             env->CallStaticVoidMethod(startClass, startMeth, strArray);
 
 #if 0
@@ -1002,7 +1018,7 @@ void AndroidRuntime::onExit(int code)
     exit(code);
 }
 
-/*
+/*获取JNIEnv
  * Get the JNIEnv pointer for this thread.
  *
  * Returns NULL if the slot wasn't allocated or populated.
@@ -1154,7 +1170,7 @@ static void quickTest(void* arg)
 #endif
 
 typedef void (*RegJAMProc)();
-
+//注册jni函数，
 static int register_jni_procs(const RegJNIRec array[], size_t count, JNIEnv* env)
 {
     for (size_t i = 0; i < count; i++) {
@@ -1174,7 +1190,8 @@ static void register_jam_procs(const RegJAMProc array[], size_t count)
         array[i]();
     }
 }
-
+//jni函数表，可以看到这个地方是一个总的入口，很多地方的c函数和java函数关联都在这里统一调度，，，
+//关联binder相关的c层和java层函数
 static const RegJNIRec gRegJNI[] = {
     REG_JNI(register_android_debug_JNITest),
     REG_JNI(register_com_android_internal_os_RuntimeInit),
@@ -1293,7 +1310,7 @@ static const RegJNIRec gRegJNI[] = {
     REG_JNI(register_android_content_res_Configuration),
 };
 
-/*
+/*注册本地方法，
  * Register android native functions with the VM.
  */
 /*static*/ int AndroidRuntime::startReg(JNIEnv* env)
@@ -1303,6 +1320,7 @@ static const RegJNIRec gRegJNI[] = {
      * attached to the JavaVM.  (This needs to go away in favor of JNI
      * Attach calls.)
      */
+     //这个地方只是保存函数指针，，，javaCreateThreadEtc
     androidSetCreateThreadFunc((android_create_thread_fn) javaCreateThreadEtc);
 
     LOGV("--- registering native functions ---\n");

@@ -72,7 +72,7 @@ protected:
     
     const bool mIsMain;
 };
-
+//获取单例ProcessState对象，gProcess定义在Static.cpp文件里面
 sp<ProcessState> ProcessState::self()
 {
     if (gProcess != NULL) return gProcess;
@@ -143,7 +143,7 @@ sp<IBinder> ProcessState::getContextObject(const String16& name, const sp<IBinde
     if (object != NULL) setContextObject(object, name);
     return object;
 }
-
+//支持进程，
 bool ProcessState::supportsProcesses() const
 {
     return mDriverFD >= 0;
@@ -307,7 +307,7 @@ void ProcessState::setArgV0(const char* txt)
         set_process_name(txt);
     }
 }
-
+//构造线程池，
 void ProcessState::spawnPooledThread(bool isMain)
 {
     if (mThreadPoolStarted) {
@@ -319,7 +319,7 @@ void ProcessState::spawnPooledThread(bool isMain)
         t->run(buf);
     }
 }
-
+//打开binder驱动，
 static int open_driver()
 {
     if (gSingleProcess) {
@@ -347,7 +347,7 @@ static int open_driver()
             fd = -1;
         }
 #if defined(HAVE_ANDROID_OS)
-        size_t maxThreads = 15;
+        size_t maxThreads = 15;//最大线程个数15个，
         result = ioctl(fd, BINDER_SET_MAX_THREADS, &maxThreads);
         if (result == -1) {
             LOGE("Binder ioctl to set max threads failed: %s", strerror(errno));
@@ -359,7 +359,7 @@ static int open_driver()
     }
     return fd;
 }
-
+//构造函数，
 ProcessState::ProcessState()
     : mDriverFD(open_driver())
     , mVMStart(MAP_FAILED)
@@ -390,7 +390,7 @@ ProcessState::ProcessState()
         // Need to run without the driver, starting our own thread pool.
     }
 }
-
+//虚构函数，
 ProcessState::~ProcessState()
 {
 }

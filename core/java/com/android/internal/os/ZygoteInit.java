@@ -116,7 +116,7 @@ public class ZygoteInit {
     };
 
 
-    /**
+    /**加载指定的类，然后找到入口方法，抛出异常，
      * Invokes a static "main(argv[]) method on class "className".
      * Converts various failing exceptions into RuntimeExceptions, with
      * the assumption that they will then cause the VM instance to exit.
@@ -131,6 +131,7 @@ public class ZygoteInit {
         Class<?> cl;
 
         try {
+        		//加载指定的类，
             cl = loader.loadClass(className);
         } catch (ClassNotFoundException ex) {
             throw new RuntimeException(
@@ -140,6 +141,7 @@ public class ZygoteInit {
 
         Method m;
         try {
+        	//找到main方法，
             m = cl.getMethod("main", new Class[] { String[].class });
         } catch (NoSuchMethodException ex) {
             throw new RuntimeException(
@@ -164,7 +166,7 @@ public class ZygoteInit {
         throw new ZygoteInit.MethodAndArgsCaller(m, argv);
     }
 
-    /**
+    /**注册server socket
      * Registers a server socket for zygote command connections
      *
      * @throws RuntimeException when open fails
@@ -190,7 +192,7 @@ public class ZygoteInit {
         }
     }
 
-    /**
+    /**等待连接，
      * Waits for and accepts a single command connection. Throws
      * RuntimeException on failure.
      */
@@ -245,7 +247,7 @@ public class ZygoteInit {
         }
     }
 
-    /**
+    /**加载和初始化常用的类，
      * Performs Zygote process initialization. Loads and initializes
      * commonly used classes.
      *
@@ -254,7 +256,7 @@ public class ZygoteInit {
      */
     private static void preloadClasses() {
         final VMRuntime runtime = VMRuntime.getRuntime();
-
+				//这个文件也是有工具来生成的，，
         InputStream is = ZygoteInit.class.getClassLoader().getResourceAsStream(
                 PRELOADED_CLASSES);
         if (is == null) {
@@ -294,6 +296,7 @@ public class ZygoteInit {
                         if (Config.LOGV) {
                             Log.v(TAG, "Preloading " + line + "...");
                         }
+                        //加载经常使用的类，
                         Class.forName(line);
                         if (Debug.getGlobalAllocSize() > PRELOAD_GC_THRESHOLD) {
                             if (Config.LOGV) {
@@ -375,7 +378,7 @@ public class ZygoteInit {
         }
     }
 
-    /**
+    /**加载经常使用的资源，以便这些资源可以跨进程共享，
      * Load in commonly used resources, so they can be shared across
      * processes.
      *
@@ -389,6 +392,7 @@ public class ZygoteInit {
         try {
             runtime.gcSoftReferences();
             runtime.runFinalizationSync();
+            //调用Resources来预加载资源，主要是drawable资源和colorstate资源，
             mResources = Resources.getSystem();
             mResources.startPreloading();
             if (PRELOAD_RESOURCES) {
@@ -415,7 +419,7 @@ public class ZygoteInit {
             Debug.stopAllocCounting();
         }
     }
-
+		//加载colorStateList资源，
     private static int preloadColorStateLists(VMRuntime runtime, TypedArray ar) {
         int N = ar.length();
         for (int i=0; i<N; i++) {
@@ -438,7 +442,7 @@ public class ZygoteInit {
         return N;
     }
 
-
+		//加载drawable资源，，
     private static int preloadDrawables(VMRuntime runtime, TypedArray ar) {
         int N = ar.length();
         for (int i=0; i<N; i++) {
@@ -485,13 +489,13 @@ public class ZygoteInit {
         runtime.runFinalizationSync();
     }
 
-    /**
+    /**这个是在SystemServer进程里面执行，
      * Finish remaining work for the newly forked system server process.
      */
     private static void handleSystemServerProcess(
             ZygoteConnection.Arguments parsedArgs)
             throws ZygoteInit.MethodAndArgsCaller {
-
+				//SystemServer进程里面不需要这个Socket,所以关闭，
         closeServerSocket();
 
         /*
@@ -502,7 +506,7 @@ public class ZygoteInit {
         /* should never reach here */
     }
 
-    /**
+    /**启动SystemServer进程，
      * Prepare the arguments and fork for the system server process.
      */
     private static boolean startSystemServer()
@@ -545,24 +549,28 @@ public class ZygoteInit {
 
         /* For child process */
         if (pid == 0) {
+        		//子进程执行这个，也就算SystemServer进程执行这个，
+        		//子进程会在这里抛出异常，
             handleSystemServerProcess(parsedArgs);
         }
 
         return true;
     }
-
+		//入口类，
     public static void main(String argv[]) {
         try {
             VMRuntime.getRuntime().setMinimumHeapSize(5 * 1024 * 1024);
 
             // Start profiling the zygote initialization.
             SamplingProfilerIntegration.start();
-
+						//创建服务端socket,用来接收来自AMS里面请求启动新进程的命令，
             registerZygoteSocket();
             EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_START,
                 SystemClock.uptimeMillis());
+                //加载类，
             preloadClasses();
             //cacheRegisterMaps();
+            //加载资源，
             preloadResources();
             EventLog.writeEvent(LOG_BOOT_PROGRESS_PRELOAD_END,
                 SystemClock.uptimeMillis());
@@ -580,6 +588,7 @@ public class ZygoteInit {
 
             if (argv[1].equals("true")) {
                 startSystemServer();
+                //子进程会在这个地方抛出异常，然后到catch语句，zygote进程会继续执行接下来的代码，
             } else if (!argv[1].equals("false")) {
                 throw new RuntimeException(argv[0] + USAGE_STRING);
             }
@@ -589,6 +598,7 @@ public class ZygoteInit {
             if (ZYGOTE_FORK_MODE) {
                 runForkMode();
             } else {
+            		//这个地方对于接收到AMS里面来的创建进程的请求后，也会抛出异常，
                 runSelectLoopMode();
             }
 
@@ -640,7 +650,7 @@ public class ZygoteInit {
         }
     }
 
-    /**
+    /**这个函数里面会进入一个死循环，不断接收AMS的创建新进程的要求，
      * Runs the zygote process's select loop. Accepts new connections as
      * they happen, and reads commands from connections one spawn-request's
      * worth at a time.
@@ -658,6 +668,7 @@ public class ZygoteInit {
 
         int loopCount = GC_LOOP_COUNT;
         while (true) {
+        	//进入一个死循环，
             int index;
 
             /*
@@ -678,6 +689,7 @@ public class ZygoteInit {
 
 
             try {
+            	//在文件描述符上面监听，一旦文件描述符上有数据，
                 fdArray = fds.toArray(fdArray);
                 index = selectReadable(fdArray);
             } catch (IOException ex) {
@@ -685,12 +697,15 @@ public class ZygoteInit {
             }
 
             if (index < 0) {
+            	//内部错误，
                 throw new RuntimeException("Error in select()");
             } else if (index == 0) {
+            	//没有可用的连接，等待客户端的请求，
                 ZygoteConnection newPeer = acceptCommandPeer();
                 peers.add(newPeer);
                 fds.add(newPeer.getFileDesciptor());
             } else {
+            	//还有没有处理完的连接请求，
                 boolean done;
                 done = peers.get(index).runOnce();
 

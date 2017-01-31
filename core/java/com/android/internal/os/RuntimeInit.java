@@ -174,7 +174,7 @@ public class RuntimeInit {
         return result.toString();
     }
 
-    /**
+    /**加载指定类，找到main方法，
      * Invokes a static "main(argv[]) method on class "className".
      * Converts various failing exceptions into RuntimeExceptions, with
      * the assumption that they will then cause the VM instance to exit.
@@ -239,7 +239,7 @@ public class RuntimeInit {
 
     public static final native void finishInit();
 
-    /**
+    /**这块代码其实是在SystemServer进程里面执行，
      * The main function called when started through the zygote process. This
      * could be unified with main(), if the native code in finishInit()
      * were rationalized with Zygote startup.<p>
