@@ -95,7 +95,7 @@ private:
             
     mutable Mutex               mLock;  // protects everything below.
             
-            Vector<handle_entry>mHandleToObject;
+            Vector<handle_entry>mHandleToObject;//保存这个进程的BpBinder信息，，
 
             bool                mManagesContexts;
             context_check_func  mBinderContextCheckFunc;

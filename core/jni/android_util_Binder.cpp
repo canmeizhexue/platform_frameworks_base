@@ -275,6 +275,7 @@ protected:
         //printf("Transact from %p to Java code sending: ", this);
         //data.print();
         //printf("\n");
+        //调用java层的代码啦，，，，mObject代表具体的本地对象Binder，，Parcel参数是对象的地址，，，
         jboolean res = env->CallBooleanMethod(mObject, gBinderOffsets.mExecTransact,
             code, (int32_t)&data, (int32_t)reply, flags);
         jthrowable excep = env->ExceptionOccurred();
@@ -354,8 +355,8 @@ public:
 
 private:
     Mutex           mLock;
-    jobject         mObject;
-    wp<JavaBBinder> mBinder;
+    jobject         mObject;//关联java层的Binder对象，
+    wp<JavaBBinder> mBinder;// C层的JavaBBinder
 };
 
 // ----------------------------------------------------------------------------
@@ -431,7 +432,7 @@ static void proxy_cleanup(const void* id, void* obj, void* cleanupCookie)
 }
 
 static Mutex mProxyLock;
-
+//参数val有可能代表的是C层的BpBinder，此时返回的就是java层的BinderProxy对象，
 jobject javaObjectForIBinder(JNIEnv* env, const sp<IBinder>& val)
 {
     if (val == NULL) return NULL;
@@ -460,10 +461,11 @@ jobject javaObjectForIBinder(JNIEnv* env, const sp<IBinder>& val)
         val->detachObject(&gBinderProxyOffsets);
         env->DeleteGlobalRef(object);
     }
-
+		//构造java层的BinderProxy对象，，，
     object = env->NewObject(gBinderProxyOffsets.mClass, gBinderProxyOffsets.mConstructor);
     if (object != NULL) {
         LOGV("objectForBinder %p: created new %p!\n", val.get(), object);
+        //java层的BinderProxy关联上C层的BpBinder对象，，
         // The proxy holds a reference to the native object.
         env->SetIntField(object, gBinderProxyOffsets.mObject, (int)val.get());
         val->incStrong(object);
@@ -482,18 +484,22 @@ jobject javaObjectForIBinder(JNIEnv* env, const sp<IBinder>& val)
 
     return object;
 }
-
+//java对象转换成ibinder
+//对于java层的Binder对象，返回与他关联的C层JavaBBinder对象
+//对于java层的BinderProxy对象，返回与他关联的C层BpBinder对象
 sp<IBinder> ibinderForJavaObject(JNIEnv* env, jobject obj)
 {
     if (obj == NULL) return NULL;
 
     if (env->IsInstanceOf(obj, gBinderOffsets.mClass)) {
+    		//obj 是Binder的对象
         JavaBBinderHolder* jbh = (JavaBBinderHolder*)
             env->GetIntField(obj, gBinderOffsets.mObject);
         return jbh != NULL ? jbh->get(env) : NULL;
     }
 
     if (env->IsInstanceOf(obj, gBinderProxyOffsets.mClass)) {
+    	//obj是BinderProxy的对象
         return (IBinder*)
             env->GetIntField(obj, gBinderProxyOffsets.mObject);
     }
@@ -629,9 +635,10 @@ static void android_os_Binder_flushPendingCommands(JNIEnv* env, jobject clazz)
 {
     IPCThreadState::self()->flushCommands();
 }
-
+//参数clazz代表java层的具体的Binder对象，
 static void android_os_Binder_init(JNIEnv* env, jobject clazz)
 {
+		//参数clazz代表java层的具体的Binder对象，
     JavaBBinderHolder* jbh = new JavaBBinderHolder(env, clazz);
     if (jbh == NULL) {
         jniThrowException(env, "java/lang/OutOfMemoryError", NULL);
@@ -639,6 +646,7 @@ static void android_os_Binder_init(JNIEnv* env, jobject clazz)
     }
     LOGV("Java Binder %p: acquiring first ref on holder %p", clazz, jbh);
     jbh->incStrong(clazz);
+    //将C层的JavaBBinderHolder保存到Java层的Binder对象里面，
     env->SetIntField(clazz, gBinderOffsets.mObject, (int)jbh);
 }
 
@@ -725,7 +733,7 @@ jint android_os_Debug_getDeathObjectCount(JNIEnv* env, jobject clazz)
 // ****************************************************************************
 // ****************************************************************************
 // ****************************************************************************
-
+//获取的是servicemanager的代理对象，，，
 static jobject android_os_BinderInternal_getContextObject(JNIEnv* env, jobject clazz)
 {
     sp<IBinder> b = ProcessState::self()->getContextObject(NULL);
@@ -910,7 +918,7 @@ static bool should_time_binder_calls() {
   return false;
 #endif
 }
-
+//参数obj代表BinderProxy,,,
 static jboolean android_os_BinderProxy_transact(JNIEnv* env, jobject obj,
                                                 jint code, jobject dataObj,
                                                 jobject replyObj, jint flags)
@@ -919,7 +927,7 @@ static jboolean android_os_BinderProxy_transact(JNIEnv* env, jobject obj,
         jniThrowException(env, "java/lang/NullPointerException", NULL);
         return JNI_FALSE;
     }
-
+		//获取java层Parcel对应的C层Parcel
     Parcel* data = parcelForJavaObject(env, dataObj);
     if (data == NULL) {
         return JNI_FALSE;
@@ -928,7 +936,7 @@ static jboolean android_os_BinderProxy_transact(JNIEnv* env, jobject obj,
     if (reply == NULL && replyObj != NULL) {
         return JNI_FALSE;
     }
-
+		//取到的是C层的BpBinder对象，
     IBinder* target = (IBinder*)
         env->GetIntField(obj, gBinderProxyOffsets.mObject);
     if (target == NULL) {
@@ -1246,9 +1254,10 @@ static void android_os_Parcel_writeString(JNIEnv* env, jobject clazz, jstring va
         }
     }
 }
-
+//写入binder对象，，，参数object对应的是java层的本地对象Binder的子类，
 static void android_os_Parcel_writeStrongBinder(JNIEnv* env, jobject clazz, jobject object)
 {
+		//获取与这个java层的Parcel对象关联的C层Parcel对象，
     Parcel* parcel = parcelForJavaObject(env, clazz);
     if (parcel != NULL) {
         const status_t err = parcel->writeStrongBinder(ibinderForJavaObject(env, object));
@@ -1345,9 +1354,10 @@ static jstring android_os_Parcel_readString(JNIEnv* env, jobject clazz)
     }
     return NULL;
 }
-
+//参数clazz标识java层的Parcel
 static jobject android_os_Parcel_readStrongBinder(JNIEnv* env, jobject clazz)
 {
+		//读取与Java层Parcel关联的C层Parcel
     Parcel* parcel = parcelForJavaObject(env, clazz);
     if (parcel != NULL) {
         return javaObjectForIBinder(env, parcel->readStrongBinder());
@@ -1444,14 +1454,15 @@ static void android_os_Parcel_freeBuffer(JNIEnv* env, jobject clazz)
         }
     }
 }
-
+//初始化Parcel
 static void android_os_Parcel_init(JNIEnv* env, jobject clazz, jint parcelInt)
 {
     Parcel* parcel = (Parcel*)parcelInt;
     int own = 0;
     if (!parcel) {
+    	//重新new了一个C层的Parcel对象，
         //LOGI("Initializing obj %p: creating new Parcel\n", clazz);
-        own = 1;
+        own = 1;////新创建的own是1，，，，，，，
         parcel = new Parcel;
     } else {
         //LOGI("Initializing obj %p: given existing Parcel %p\n", clazz, parcel);
@@ -1461,19 +1472,23 @@ static void android_os_Parcel_init(JNIEnv* env, jobject clazz, jint parcelInt)
         return;
     }
     //LOGI("Initializing obj %p from C++ Parcel %p, own=%d\n", clazz, parcel, own);
+    //关联C层Parcel和java层Parcel对象，，，，
     env->SetIntField(clazz, gParcelOffsets.mOwnObject, own);
     env->SetIntField(clazz, gParcelOffsets.mObject, (int)parcel);
 }
-
+//销毁Parcel,,,,,
 static void android_os_Parcel_destroy(JNIEnv* env, jobject clazz)
 {
     int32_t own = env->GetIntField(clazz, gParcelOffsets.mOwnObject);
     if (own) {
+    		//获取与这个java层对象关联的C层对象，，，
         Parcel* parcel = parcelForJavaObject(env, clazz);
+        //取消C层Parcel和java层Parcel的关联，，，，
         env->SetIntField(clazz, gParcelOffsets.mObject, 0);
         //LOGI("Destroying obj %p: deleting C++ Parcel %p\n", clazz, parcel);
         delete parcel;
     } else {
+    	//取消C层Parcel和java层Parcel的关联，，，，
         env->SetIntField(clazz, gParcelOffsets.mObject, 0);
         //LOGI("Destroying obj %p: leaving C++ Parcel %p\n", clazz);
     }
@@ -1691,7 +1706,7 @@ static int int_register_android_os_Parcel(JNIEnv* env)
         env, kParcelPathName,
         gParcelMethods, NELEM(gParcelMethods));
 }
-
+//AndroidRuntime.cpp里面调用了这个函数，
 int register_android_os_Binder(JNIEnv* env)
 {
     if (int_register_android_os_Binder(env) < 0)
@@ -1700,6 +1715,8 @@ int register_android_os_Binder(JNIEnv* env)
         return -1;
     if (int_register_android_os_BinderProxy(env) < 0)
         return -1;
+        
+    //关联parcel,,,,
     if (int_register_android_os_Parcel(env) < 0)
         return -1;
     return 0;

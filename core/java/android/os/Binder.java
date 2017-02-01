@@ -26,7 +26,7 @@ import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Modifier;
 
-/**
+/**底层关联的是frameworks/base/core/jni/android_util_Binder.cpp
  * Base class for a remotable object, the core part of a lightweight
  * remote procedure call mechanism defined by {@link IBinder}.
  * This class is an implementation of IBinder that provides
@@ -308,6 +308,8 @@ public class Binder implements IBinder {
     private native final void destroy();
 
     // Entry point from android_util_Binder.cpp's onTransact
+    //尽管是私有函数，一样可以调用，，，
+    //dataObj和replyObj代表C层Parcel对象的地址，，
     private boolean execTransact(int code, int dataObj, int replyObj,
             int flags) {
         Parcel data = Parcel.obtain(dataObj);
@@ -387,5 +389,5 @@ final class BinderProxy implements IBinder {
     }
     
     final private WeakReference mSelf;
-    private int mObject;
+    private int mObject; ///关联C层的BpBinder对象，
 }

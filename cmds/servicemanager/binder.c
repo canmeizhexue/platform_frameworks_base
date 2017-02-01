@@ -90,7 +90,7 @@ struct binder_state
     void *mapped;
     unsigned mapsize;
 };
-
+//打开binder驱动，，，
 struct binder_state *binder_open(unsigned mapsize)
 {
     struct binder_state *bs;
@@ -133,7 +133,7 @@ void binder_close(struct binder_state *bs)
     close(bs->fd);
     free(bs);
 }
-
+//告诉binder驱动，成为servicemanager
 int binder_become_context_manager(struct binder_state *bs)
 {
     return ioctl(bs->fd, BINDER_SET_CONTEXT_MGR, 0);
@@ -232,6 +232,7 @@ int binder_parse(struct binder_state *bs, struct binder_io *bio,
                 bio_init(&reply, rdata, sizeof(rdata), 4);
                 bio_init_from_txn(&msg, txn);
                 res = func(bs, txn, &msg, &reply);
+                //发送响应结果，，，
                 binder_send_reply(bs, &reply, txn->data, res);
             }
             ptr += sizeof(*txn) / sizeof(uint32_t);
@@ -353,7 +354,7 @@ fail:
     reply->flags |= BIO_F_IOERROR;
     return -1;
 }
-
+//第二个参数是函数指针，，，
 void binder_loop(struct binder_state *bs, binder_handler func)
 {
     int res;
@@ -366,6 +367,7 @@ void binder_loop(struct binder_state *bs, binder_handler func)
     
     readbuf[0] = BC_ENTER_LOOPER;
     binder_write(bs, readbuf, sizeof(unsigned));
+    //进入循环，，，
 
     for (;;) {
         bwr.read_size = sizeof(readbuf);
@@ -378,7 +380,7 @@ void binder_loop(struct binder_state *bs, binder_handler func)
             LOGE("binder_loop: ioctl failed (%s)\n", strerror(errno));
             break;
         }
-
+				//解析数据，，
         res = binder_parse(bs, 0, readbuf, bwr.read_consumed, func);
         if (res == 0) {
             LOGE("binder_loop: unexpected reply?!\n");

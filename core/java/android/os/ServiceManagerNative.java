@@ -24,7 +24,7 @@ package android.os;
  */
 public abstract class ServiceManagerNative extends Binder implements IServiceManager
 {
-    /**
+    /**对于App进程来说这个地方的obj参数其实是BinderProxy对象，代表的是ServiceManager,,,它的queryLocalInterface返回的肯定是null
      * Cast a Binder object into a service manager interface, generating
      * a proxy if needed.
      */
@@ -142,7 +142,7 @@ class ServiceManagerProxy implements IServiceManager {
         Parcel reply = Parcel.obtain();
         data.writeInterfaceToken(IServiceManager.descriptor);
         data.writeString(name);
-        data.writeStrongBinder(service);
+        data.writeStrongBinder(service);//参数service代表本地对象，是Binder的子类，，
         mRemote.transact(ADD_SERVICE_TRANSACTION, data, reply, 0);
         reply.recycle();
         data.recycle();
@@ -170,5 +170,5 @@ class ServiceManagerProxy implements IServiceManager {
         data.recycle();
     }
 
-    private IBinder mRemote;
+    private IBinder mRemote;//关联的是BinderProxy对象
 }

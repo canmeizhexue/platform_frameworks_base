@@ -517,7 +517,7 @@ RefBase::weakref_type* RefBase::getWeakRefs() const
 {
     return mRefs;
 }
-
+//构造函数，，，
 RefBase::RefBase()
     : mRefs(new weakref_impl(this))
 {

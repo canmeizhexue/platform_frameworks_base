@@ -142,28 +142,31 @@ inline static status_t finish_flatten_binder(
 {
     return out->writeObject(flat, false);
 }
-
+//对于写入本地对象本身（相对于代理对象而言，），参数binder代表的是一个C层的JavaBBinder
+//对于写入代理对象，参数binder代表的是一个C层的BpBinder
 status_t flatten_binder(const sp<ProcessState>& proc,
     const sp<IBinder>& binder, Parcel* out)
 {
-    flat_binder_object obj;
+    flat_binder_object obj;//创建一个对象，，
     
     obj.flags = 0x7f | FLAT_BINDER_FLAG_ACCEPTS_FDS;
     if (binder != NULL) {
-        IBinder *local = binder->localBinder();
+        IBinder *local = binder->localBinder();//对于JavaBBinder而烟，这个返回的是JavaBBinder本身，对于BpBinder而言返回null
         if (!local) {
-            BpBinder *proxy = binder->remoteBinder();
+        	//代理对象走这条，，，
+            BpBinder *proxy = binder->remoteBinder();//对于JavaBBinder而烟，这个返回的是null，对于BpBinder而言返回BpBinder本身
             if (proxy == NULL) {
                 LOGE("null proxy");
             }
             const int32_t handle = proxy ? proxy->handle() : 0;
             obj.type = BINDER_TYPE_HANDLE;
-            obj.handle = handle;
-            obj.cookie = NULL;
+            obj.handle = handle;  //对于代理对象而言，写入的是整型handle
+            obj.cookie = NULL;//对于代理对象而言，写入的是null
         } else {
+        	//本地对象走这条，，，
             obj.type = BINDER_TYPE_BINDER;
-            obj.binder = local->getWeakRefs();
-            obj.cookie = local;
+            obj.binder = local->getWeakRefs();//对于本地对象而言，写入的是对应的另外一个对象，，，，
+            obj.cookie = local;//cookie也是JavaBBinder对象本身，，
         }
     } else {
         obj.type = BINDER_TYPE_BINDER;
@@ -173,7 +176,7 @@ status_t flatten_binder(const sp<ProcessState>& proc,
     
     return finish_flatten_binder(binder, obj, out);
 }
-
+//注意第二个参数是wp,
 status_t flatten_binder(const sp<ProcessState>& proc,
     const wp<IBinder>& binder, Parcel* out)
 {
@@ -227,7 +230,8 @@ inline static status_t finish_unflatten_binder(
 {
     return NO_ERROR;
 }
-    
+//注意最后一个参数类型是sp,,
+//返回的要么是JavaBBinder,要么是BpBinder
 status_t unflatten_binder(const sp<ProcessState>& proc,
     const Parcel& in, sp<IBinder>* out)
 {
@@ -236,9 +240,11 @@ status_t unflatten_binder(const sp<ProcessState>& proc,
     if (flat) {
         switch (flat->type) {
             case BINDER_TYPE_BINDER:
+            		//类型是binder类型，，，其实这里是JavaBBinder
                 *out = static_cast<IBinder*>(flat->cookie);
                 return finish_unflatten_binder(NULL, *flat, in);
             case BINDER_TYPE_HANDLE:
+            		//handle类型，，这里返回BpBinder
                 *out = proc->getStrongProxyForHandle(flat->handle);
                 return finish_unflatten_binder(
                     static_cast<BpBinder*>(out->get()), *flat, in);
@@ -647,7 +653,8 @@ status_t Parcel::writeString16(const char16_t* str, size_t len)
     }
     return err;
 }
-
+//对于写入对象本身（相对于代理对象而言，），参数val代表的是一个C层的JavaBBinder
+//对于写入代理对象，参数val代表的是一个C层的BpBinder
 status_t Parcel::writeStrongBinder(const sp<IBinder>& val)
 {
     return flatten_binder(ProcessState::self(), val, this);
@@ -743,7 +750,7 @@ status_t Parcel::writeObject(const flat_binder_object& val, bool nullMetaData)
     const bool enoughObjects = mObjectsSize < mObjectsCapacity;
     if (enoughData && enoughObjects) {
 restart_write:
-        *reinterpret_cast<flat_binder_object*>(mData+mDataPos) = val;
+        *reinterpret_cast<flat_binder_object*>(mData+mDataPos) = val;//这个地方会导致对象的复制，
         
         // Need to write meta-data?
         if (nullMetaData || val.binder != NULL) {
@@ -957,6 +964,7 @@ const char16_t* Parcel::readString16Inplace(size_t* outLen) const
 sp<IBinder> Parcel::readStrongBinder() const
 {
     sp<IBinder> val;
+    //强引用的版本
     unflatten_binder(ProcessState::self(), *this, &val);
     return val;
 }

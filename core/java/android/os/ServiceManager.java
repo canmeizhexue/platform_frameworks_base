@@ -35,7 +35,7 @@ public final class ServiceManager {
             return sServiceManager;
         }
 
-        // Find the service manager
+        // Find the service manager,BinderInternal.getContextObject返回的其实是BinderProxy,BinderProxy关联了C层的BpBinder,BpBinder有一个整型变量handle,当handle=0时代表ServiceManager
         sServiceManager = ServiceManagerNative.asInterface(BinderInternal.getContextObject());
         return sServiceManager;
     }
@@ -60,7 +60,7 @@ public final class ServiceManager {
         return null;
     }
 
-    /**
+    /**参数service一般就是本地Binder对象，比如WMS,,,
      * Place a new @a service called @a name into the service
      * manager.
      * 

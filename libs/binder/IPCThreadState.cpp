@@ -293,7 +293,7 @@ static bool gHaveTLS = false;
 static pthread_key_t gTLS = 0;
 static bool gShutdown = false;
 static bool gDisableBackgroundScheduling = false;
-
+//获取对象，，，每个线程一个IPCThreadState对象
 IPCThreadState* IPCThreadState::self()
 {
     if (gHaveTLS) {
@@ -392,7 +392,7 @@ void IPCThreadState::restoreCallingIdentity(int64_t token)
     mCallingUid = (int)(token>>32);
     mCallingPid = (int)token;
 }
-
+//恢复成自己进程的pid和uid
 void IPCThreadState::clearCaller()
 {
     mCallingPid = getpid();
@@ -409,7 +409,7 @@ void IPCThreadState::flushCommands()
 void IPCThreadState::joinThreadPool(bool isMain)
 {
     LOG_THREADPOOL("**** THREAD %p (PID %d) IS JOINING THE THREAD POOL\n", (void*)pthread_self(), getpid());
-
+		//告诉驱动，，要么进入循环，要么注册循环，，，
     mOut.writeInt32(isMain ? BC_ENTER_LOOPER : BC_REGISTER_LOOPER);
     
     // This thread may have been spawned by a thread that was in the background
@@ -441,10 +441,11 @@ void IPCThreadState::joinThreadPool(bool isMain)
                 mPendingStrongDerefs.clear();
             }
         }
-
+				//获取下一条要执行的命令，可能会阻塞
         // now get the next command to be processed, waiting if necessary
         result = talkWithDriver();
         if (result >= NO_ERROR) {
+        	  //没有错误，，，
             size_t IN = mIn.dataAvail();
             if (IN < sizeof(int32_t)) continue;
             cmd = mIn.readInt32();
@@ -468,15 +469,18 @@ void IPCThreadState::joinThreadPool(bool isMain)
 
         // Let this thread exit the thread pool if it is no longer
         // needed and it is not the main process thread.
+        //非主线程超时可以退出死循环的的，，，
         if(result == TIMED_OUT && !isMain) {
             break;
         }
     } while (result != -ECONNREFUSED && result != -EBADF);
+    //离开线程池了，，，，告诉binder驱动，离开循环了，，
 
     LOG_THREADPOOL("**** THREAD %p (PID %d) IS LEAVING THE THREAD POOL err=%p\n",
         (void*)pthread_self(), getpid(), (void*)result);
     
     mOut.writeInt32(BC_EXIT_LOOPER);
+    //不需要接收数据，单纯的告诉binder驱动，这个线程要退出死循环了，不再接收新的指令，
     talkWithDriver(false);
 }
 
@@ -515,7 +519,7 @@ status_t IPCThreadState::transact(int32_t handle,
         if (reply) reply->setError(err);
         return (mLastError = err);
     }
-    
+    //没有这个标记，说明需要返回结果，，，
     if ((flags & TF_ONE_WAY) == 0) {
         #if 0
         if (code == 4) { // relayout
@@ -636,17 +640,17 @@ IPCThreadState::IPCThreadState()
 IPCThreadState::~IPCThreadState()
 {
 }
-
+//往客户端发送数据，，，
 status_t IPCThreadState::sendReply(const Parcel& reply, uint32_t flags)
 {
     status_t err;
     status_t statusBuffer;
     err = writeTransactionData(BC_REPLY, flags, -1, 0, reply, &statusBuffer);
     if (err < NO_ERROR) return err;
-    
+    //往驱动发送完数据，，然后会收到驱动发来交易结束BR_TRANSACTION_COMPLETE的指令，，，
     return waitForResponse(NULL, NULL);
 }
-
+//C++里面可以有默认参数，从右边开始指定，，
 status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
 {
     int32_t cmd;
@@ -689,13 +693,16 @@ status_t IPCThreadState::waitForResponse(Parcel *reply, status_t *acquireResult)
         
         case BR_REPLY:
             {
+            	//之前发送BC_TRANSACTION命令，现在接受驱动发过来的结果，，，，
                 binder_transaction_data tr;
+                //将数据读入这个结构，
                 err = mIn.read(&tr, sizeof(tr));
                 LOG_ASSERT(err == NO_ERROR, "Not enough command data for brREPLY");
                 if (err != NO_ERROR) goto finish;
 
                 if (reply) {
                     if ((tr.flags & TF_STATUS_CODE) == 0) {
+                    	//接收到数据，，，
                         reply->ipcSetDataReference(
                             reinterpret_cast<const uint8_t*>(tr.data.ptr.buffer),
                             tr.data_size,
@@ -737,7 +744,7 @@ finish:
     
     return err;
 }
-
+//参数doReceive标识是否要接收binder的结果，，，，
 status_t IPCThreadState::talkWithDriver(bool doReceive)
 {
     LOG_ASSERT(mProcess->mDriverFD >= 0, "Binder driver is not opened");
@@ -751,7 +758,7 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
     // from data left in the input buffer and the caller
     // has requested to read the next data.
     const size_t outAvail = (!doReceive || needRead) ? mOut.dataSize() : 0;
-    
+    //将数据复制到bwr,,bwr才是和驱动交互的数据结构，这个结构既有地方保存读入的数据也有地方保存写出的数据
     bwr.write_size = outAvail;
     bwr.write_buffer = (long unsigned int)mOut.data();
 
@@ -786,7 +793,7 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
     do {
         IF_LOG_COMMANDS() {
             alog << "About to read/write, write size = " << mOut.dataSize() << endl;
-        }
+//通过ioctl函数和binder驱动进行通信，，，        }
 #if defined(HAVE_ANDROID_OS)
         if (ioctl(mProcess->mDriverFD, BINDER_WRITE_READ, &bwr) >= 0)
             err = NO_ERROR;
@@ -832,13 +839,13 @@ status_t IPCThreadState::talkWithDriver(bool doReceive)
     
     return err;
 }
-
+//handle标识给谁发送数据
 status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,
     int32_t handle, uint32_t code, const Parcel& data, status_t* statusBuffer)
 {
     binder_transaction_data tr;
 
-    tr.target.handle = handle;
+    tr.target.handle = handle;//标识给谁发送数据
     tr.code = code;
     tr.flags = binderFlags;
     
@@ -858,7 +865,7 @@ status_t IPCThreadState::writeTransactionData(int32_t cmd, uint32_t binderFlags,
     } else {
         return (mLastError = err);
     }
-    
+    //写入命令，写入数据，，，
     mOut.writeInt32(cmd);
     mOut.write(&tr, sizeof(tr));
     
@@ -871,13 +878,15 @@ void setTheContextObject(sp<BBinder> obj)
 {
     the_context_object = obj;
 }
-
+//执行命令，，，，
 status_t IPCThreadState::executeCommand(int32_t cmd)
 {
     BBinder* obj;
     RefBase::weakref_type* refs;
     status_t result = NO_ERROR;
-    
+    //针对不同的命令分别处理，，，接收一方的命令都是BR开头的，，，主要是面向驱动程序的，向驱动程序发送命令就是BC开头的，
+    //收到驱动程序的回应，则是以BR开头的，，，，
+    //从下面也可以看到，，BBinder和BpBinder的指针可以传入binder驱动程序，，，
     switch (cmd) {
     case BR_ERROR:
         result = mIn.readInt32();
@@ -953,7 +962,9 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
     
     case BR_TRANSACTION:
         {
+        	  //这个应该对应的是本地Binder对象的响应执行，，
             binder_transaction_data tr;
+            //将数据读入这个结构，，，
             result = mIn.read(&tr, sizeof(tr));
             LOG_ASSERT(result == NO_ERROR,
                 "Not enough command data for brTRANSACTION");
@@ -968,7 +979,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
             
             const pid_t origPid = mCallingPid;
             const uid_t origUid = mCallingUid;
-            
+            //保存当前和我们进行通信的对方进程的信息，，，，
             mCallingPid = tr.sender_pid;
             mCallingUid = tr.sender_euid;
             
@@ -1008,11 +1019,13 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
                     << reinterpret_cast<const size_t*>(tr.data.ptr.offsets) << endl;
             }
             if (tr.target.ptr) {
+            		//其实是JavaBBinder,,,
                 sp<BBinder> b((BBinder*)tr.cookie);
                 const status_t error = b->transact(tr.code, buffer, &reply, tr.flags);
                 if (error < NO_ERROR) reply.setError(error);
 
             } else {
+            		
                 const status_t error = the_context_object->transact(tr.code, buffer, &reply, tr.flags);
                 if (error < NO_ERROR) reply.setError(error);
             }
@@ -1021,12 +1034,13 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
             //     mCallingPid, origPid, origUid);
             
             if ((tr.flags & TF_ONE_WAY) == 0) {
+            		//发送响应数据，，因为客户端还在等待，，，
                 LOG_ONEWAY("Sending reply to %d!", mCallingPid);
                 sendReply(reply, 0);
             } else {
                 LOG_ONEWAY("NOT sending reply to %d!", mCallingPid);
             }
-            
+            // 恢复调用者信息，，，
             mCallingPid = origPid;
             mCallingUid = origUid;
 
@@ -1061,6 +1075,7 @@ status_t IPCThreadState::executeCommand(int32_t cmd)
         break;
         
     case BR_SPAWN_LOOPER:
+    	//产生一个新的线程来执行，，，，，
         mProcess->spawnPooledThread(false);
         break;
         

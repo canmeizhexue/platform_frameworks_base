@@ -153,6 +153,7 @@ void ProcessState::startThreadPool()
 {
     AutoMutex _l(mLock);
     if (!mThreadPoolStarted) {
+    		//标记主线程已经进入循环和驱动交互
         mThreadPoolStarted = true;
         spawnPooledThread(true);
     }
@@ -194,7 +195,7 @@ bool ProcessState::becomeContextManager(context_check_func checkFunc, void* user
 
 ProcessState::handle_entry* ProcessState::lookupHandleLocked(int32_t handle)
 {
-    const size_t N=mHandleToObject.size();
+    const size_t N=mHandleToObject.size();//Vector类型，
     if (N <= (size_t)handle) {
         handle_entry e;
         e.binder = NULL;
@@ -204,7 +205,7 @@ ProcessState::handle_entry* ProcessState::lookupHandleLocked(int32_t handle)
     }
     return &mHandleToObject.editItemAt(handle);
 }
-
+//返回BpBinder
 sp<IBinder> ProcessState::getStrongProxyForHandle(int32_t handle)
 {
     sp<IBinder> result;
@@ -311,6 +312,7 @@ void ProcessState::setArgV0(const char* txt)
 void ProcessState::spawnPooledThread(bool isMain)
 {
     if (mThreadPoolStarted) {
+    		//数量加一，，
         int32_t s = android_atomic_add(1, &mThreadPoolSeq);
         char buf[32];
         sprintf(buf, "Binder Thread #%d", s);

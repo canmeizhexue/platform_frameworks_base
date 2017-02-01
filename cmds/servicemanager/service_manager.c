@@ -185,7 +185,7 @@ int do_add_service(struct binder_state *bs,
     binder_link_to_death(bs, ptr, &si->death);
     return 0;
 }
-
+//处理函数，，，
 int svcmgr_handler(struct binder_state *bs,
                    struct binder_txn *txn,
                    struct binder_io *msg,
@@ -256,16 +256,17 @@ int svcmgr_handler(struct binder_state *bs,
 int main(int argc, char **argv)
 {
     struct binder_state *bs;
-    void *svcmgr = BINDER_SERVICE_MANAGER;
+    void *svcmgr = BINDER_SERVICE_MANAGER;//其实是一个魔法数0，，，，
 
     bs = binder_open(128*1024);
-
+		//告诉binder驱动，我是servicemanager
     if (binder_become_context_manager(bs)) {
         LOGE("cannot become context manager (%s)\n", strerror(errno));
         return -1;
     }
 
     svcmgr_handle = svcmgr;
+    //第二个参数是函数指针，
     binder_loop(bs, svcmgr_handler);
     return 0;
 }

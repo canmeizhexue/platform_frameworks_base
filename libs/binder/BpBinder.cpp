@@ -155,7 +155,7 @@ status_t BpBinder::dump(int fd, const Vector<String16>& args)
     status_t err = transact(DUMP_TRANSACTION, send, &reply);
     return err;
 }
-
+//发送请求数据，读取请求结果，，
 status_t BpBinder::transact(
     uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags)
 {

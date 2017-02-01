@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
+/**在android_util_Binder.cpp里面进行关联的
  * Container for a message (data and object references) that can
  * be sent through an IBinder.  A Parcel can contain both flattened data
  * that will be unflattened on the other side of the IPC (using the various
