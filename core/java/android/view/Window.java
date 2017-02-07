@@ -93,7 +93,7 @@ public abstract class Window {
     private TypedArray mWindowStyle;
     private Callback mCallback;
     private WindowManager mWindowManager;
-    private IBinder mAppToken;
+    private IBinder mAppToken;//对于Activity而言，这是对应ActivityRecord。否则这个字段为null，，比如说Window给Dialog使用的时候
     private String mAppName;
     private Window mContainer;
     private Window mActiveChild;
@@ -353,7 +353,7 @@ public abstract class Window {
         return mHasChildren;
     }
     
-    /**
+    /**对于Activity调用这个函数的时候第一个参数是null,,appToken其实代表的是ActivityRecord,
      * Set the window manager for use by this Window to, for example,
      * display panels.  This is <em>not</em> used for displaying the
      * Window itself -- that must be done by the client.
@@ -365,22 +365,25 @@ public abstract class Window {
         mAppToken = appToken;
         mAppName = appName;
         if (wm == null) {
-            wm = WindowManagerImpl.getDefault();
+        		//对于Activity而言，要执行这个的，，，
+            wm = WindowManagerImpl.getDefault(); //整个进程只有一个WindowManagerImpl,,,,
         }
         mWindowManager = new LocalWindowManager(wm);
     }
 
     private class LocalWindowManager implements WindowManager {
         LocalWindowManager(WindowManager wm) {
-            mWindowManager = wm;
+            mWindowManager = wm;//对于Activity而言，这个wm为WindowManagerImpl
             mDefaultDisplay = mContext.getResources().getDefaultDisplay(
                     mWindowManager.getDefaultDisplay());
         }
-
+				//添加View,,,
         public final void addView(View view, ViewGroup.LayoutParams params) {
             // Let this throw an exception on a bad params.
             WindowManager.LayoutParams wp = (WindowManager.LayoutParams)params;
             CharSequence curTitle = wp.getTitle();
+            
+            //对于Activity而言，wp.type=TYPE_BASE_APPLICATION
             if (wp.type >= WindowManager.LayoutParams.FIRST_SUB_WINDOW &&
                 wp.type <= WindowManager.LayoutParams.LAST_SUB_WINDOW) {
                 if (wp.token == null) {
@@ -411,6 +414,7 @@ public abstract class Window {
                 }
             } else {
                 if (wp.token == null) {
+                		//启动Activity的时候，满足这个条件，
                     wp.token = mContainer == null ? mAppToken : mContainer.mAppToken;
                 }
                 if ((curTitle == null || curTitle.length() == 0)
@@ -421,6 +425,7 @@ public abstract class Window {
             if (wp.packageName == null) {
                 wp.packageName = mContext.getPackageName();
             }
+            //添加view，，
             mWindowManager.addView(view, params);
         }
 
@@ -445,7 +450,7 @@ public abstract class Window {
         private final Display mDefaultDisplay;
     }
 
-    /**
+    /**返回的其实是LocalWindowManager
      * Return the window manager allowing this Window to display its own
      * windows.
      *
@@ -455,7 +460,7 @@ public abstract class Window {
         return mWindowManager;
     }
 
-    /**
+    /**设置回调接口，，，对于Activity而言，其实传入的参数就是Activity，
      * Set the Callback interface for this window, used to intercept key
      * events and other dynamic operations in the window.
      *

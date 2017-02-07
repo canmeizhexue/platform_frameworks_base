@@ -2898,7 +2898,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
         mPersistentDrawingCache = drawingCacheToKeep & PERSISTENT_ALL_CACHES;
     }
 
-    /**
+    /**一般用于从布局文件里面解析出布局参数，，，不同子类会覆盖这个函数。
      * Returns a new set of layout parameters based on the supplied attributes set.
      *
      * @param attrs the attributes to build the layout parameters from
@@ -3109,7 +3109,10 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
         child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
     }
 
-    /**
+    /**参数parentWidthMeasureSpec是当前ViewGroup的父亲强加给当前ViewGroup的。
+    	参数widthUsed表示当前ViewGroup已经使用了的宽度(可能是当前ViewGroup的其他子view已经使用了)
+    	
+    	margin是指考虑孩子结点的margin,,,,
      * Ask one of the children of this view to measure itself, taking into
      * account both the MeasureSpec requirements for this view and its padding
      * and margins. The child must have MarginLayoutParams The heavy lifting is
@@ -3127,7 +3130,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
             int parentWidthMeasureSpec, int widthUsed,
             int parentHeightMeasureSpec, int heightUsed) {
         final MarginLayoutParams lp = (MarginLayoutParams) child.getLayoutParams();
-
+				//从这个地方可以看出，要想得到A的MeasureSpec,,考虑了A的布局参数，A的margin,A的父亲的MeasureSpec,A的父亲的padding,,已经被使用完了的空间。。。
         final int childWidthMeasureSpec = getChildMeasureSpec(parentWidthMeasureSpec,
                 mPaddingLeft + mPaddingRight + lp.leftMargin + lp.rightMargin
                         + widthUsed, lp.width);
@@ -3138,7 +3141,11 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
         child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
     }
 
-    /**
+    /**计算传递给孩子的MeasureSpec，，，这个函数只计算出宽或者高，所以要分别针对宽和高计算
+    从当前ViewGroup的MeasureSpec和孩子的布局参数共同决定出孩子的MeasureSpec
+    参数spec代表当前ViewGroup的SpecMeasure,,childDimension代表当前ViewGroup的孩子想要多大(match_parent,wrap_content,或者具体值)
+    
+    4种情况是EXACTLY，3种情况是AT_MOST，，2种情况是UNSPECIFIED
      * Does the hard part of measureChildren: figuring out the MeasureSpec to
      * pass to a particular child. This method figures out the right MeasureSpec
      * for one dimension (height or width) of one child view.
@@ -3160,7 +3167,8 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
     public static int getChildMeasureSpec(int spec, int padding, int childDimension) {
         int specMode = MeasureSpec.getMode(spec);
         int specSize = MeasureSpec.getSize(spec);
-
+				
+				//还剩下多少，，
         int size = Math.max(0, specSize - padding);
 
         int resultSize = 0;
@@ -3174,7 +3182,7 @@ public abstract class ViewGroup extends View implements ViewParent, ViewManager 
                 resultMode = MeasureSpec.EXACTLY;
             } else if (childDimension == LayoutParams.MATCH_PARENT) {
                 // Child wants to be our size. So be it.
-                resultSize = size;
+                resultSize = size;//剩下多少，，
                 resultMode = MeasureSpec.EXACTLY;
             } else if (childDimension == LayoutParams.WRAP_CONTENT) {
                 // Child wants to determine its own size. It can't be

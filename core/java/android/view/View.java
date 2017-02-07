@@ -6042,7 +6042,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
     protected void onDraw(Canvas canvas) {
     }
 
-    /*
+    /*和父view进行关联
      * Caller is responsible for calling requestLayout if necessary.
      * (This allows addViewInLayout to not request a new layout.)
      */
@@ -6136,7 +6136,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
         return mAttachInfo != null ? mAttachInfo.mSession : null;
     }
 
-    /**
+    /**这个view北添加到窗口了，，，保存attachInfo信息，，，如果是在xml里面定义的话，会在measure之前，
      * @param info the {@link android.view.View.AttachInfo} to associated with
      *        this view
      */
@@ -7146,7 +7146,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
         return (mPrivateFlags & FORCE_LAYOUT) == FORCE_LAYOUT;
     }
 
-    /**
+    /**放置位置，，，，，
      * Assign a size and position to a view and all of its
      * descendants
      *
@@ -7173,12 +7173,12 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
             }
 
             onLayout(changed, l, t, r, b);
-            mPrivateFlags &= ~LAYOUT_REQUIRED;
+            mPrivateFlags &= ~LAYOUT_REQUIRED;//清除标记，因为这个view树的lyout做完了，，，
         }
         mPrivateFlags &= ~FORCE_LAYOUT;
     }
 
-    /**
+    /**放置位置，，，
      * Called from layout when this view should
      * assign a size and position to each of its children.
      *
@@ -7221,19 +7221,21 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
             // Remember our drawn bit
             int drawn = mPrivateFlags & DRAWN;
 
-            // Invalidate our old position
+            // Invalidate our old position，，原来老区域要重绘，，，
             invalidate();
 
 
             int oldWidth = mRight - mLeft;
             int oldHeight = mBottom - mTop;
-
+            
+            
+						//保存新的位置，相对于父view，，，
             mLeft = left;
             mTop = top;
             mRight = right;
             mBottom = bottom;
 
-            mPrivateFlags |= HAS_BOUNDS;
+            mPrivateFlags |= HAS_BOUNDS;//有边界，，，，
 
             int newWidth = right - left;
             int newHeight = bottom - top;
@@ -8277,7 +8279,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
         mPrivateFlags |= FORCE_LAYOUT;
     }
 
-    /**
+    /**参数是父view传过来的，，真正的测量操作是在onMeasure里面，子类只能覆盖onMeasure来实现测量，测量自己和孩子
      * <p>
      * This is called to find out how big a view should be. The parent
      * supplies constraint information in the width and height parameters.
@@ -8298,6 +8300,8 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
      * @see #onMeasure(int, int)
      */
     public final void measure(int widthMeasureSpec, int heightMeasureSpec) {
+    		//1.如果和之前保存的测量要求不一致
+    		//2.或者如果设置了强制布局的标记，，，，
         if ((mPrivateFlags & FORCE_LAYOUT) == FORCE_LAYOUT ||
                 widthMeasureSpec != mOldWidthMeasureSpec ||
                 heightMeasureSpec != mOldHeightMeasureSpec) {
@@ -8308,8 +8312,9 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
             if (ViewDebug.TRACE_HIERARCHY) {
                 ViewDebug.trace(this, ViewDebug.HierarchyTraceType.ON_MEASURE);
             }
-
+            //必须设置已经测量过了的标记。。。。
             // measure ourselves, this should set the measured dimension flag back
+            //
             onMeasure(widthMeasureSpec, heightMeasureSpec);
 
             // flag not set, setMeasuredDimension() was not invoked, we raise
@@ -8327,7 +8332,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
         mOldHeightMeasureSpec = heightMeasureSpec;
     }
 
-    /**
+    /**测量这个view和这个view的内容。子类提供准确和高效的内容测量，默认实现会考虑背景，子类需要确保满足最小的宽和高
      * <p>
      * Measure the view and its content to determine the measured width and the
      * measured height. This method is invoked by {@link #measure(int, int)} and
@@ -8378,7 +8383,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
                 getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec));
     }
 
-    /**
+    /**保存测量好的高和宽，，，，
      * <p>This mehod must be called by {@link #onMeasure(int, int)} to store the
      * measured width and measured height. Failing to do so will trigger an
      * exception at measurement time.</p>
@@ -8410,7 +8415,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
             result = size;
             break;
         case MeasureSpec.AT_MOST:
-            result = Math.min(size, specSize);
+            result = Math.min(size, specSize);//取最小值，，，
             break;
         case MeasureSpec.EXACTLY:
             result = specSize;

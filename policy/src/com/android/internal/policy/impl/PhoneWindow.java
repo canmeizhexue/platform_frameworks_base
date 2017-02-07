@@ -164,9 +164,10 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
     private SearchManager mSearchManager = null;
 
     private TelephonyManager mTelephonyManager = null;
-    
+    //构造函数，对于Activity，参数context传入的就是Activity,
     public PhoneWindow(Context context) {
         super(context);
+        //构造一个布局解析器，
         mLayoutInflater = LayoutInflater.from(context);
     }
 
@@ -196,7 +197,7 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
         }
         return super.requestFeature(featureId);
     }
-
+		//设置内容view
     @Override
     public void setContentView(int layoutResID) {
         if (mContentParent == null) {
@@ -204,9 +205,11 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
         } else {
             mContentParent.removeAllViews();
         }
+        //解析布局文件
         mLayoutInflater.inflate(layoutResID, mContentParent);
         final Callback cb = getCallback();
         if (cb != null) {
+        		//通知内容改变了
             cb.onContentChanged();
         }
     }
@@ -2204,6 +2207,7 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
         mDecor.startChanging();
 
         View in = mLayoutInflater.inflate(layoutResource, null);
+        //根据不同的条件选择不同的布局文件，，，然后解析xml文件，作为DecorView的子view。。。。
         decor.addView(in, new ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT));
 
         ViewGroup contentParent = (ViewGroup)findViewById(ID_ANDROID_CONTENT);
@@ -2250,7 +2254,7 @@ public class PhoneWindow extends Window implements MenuBuilder.Callback {
 
         return contentParent;
     }
-
+		//设置DecorView,,也就是说最外层是DecorView,DecorView有一个子view，专门用来设置app里面定制的内容view
     private void installDecor() {
         if (mDecor == null) {
             mDecor = generateDecor();

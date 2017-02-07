@@ -97,7 +97,7 @@ public class LinearLayout extends ViewGroup {
     private int mTotalLength;
 
     @ViewDebug.ExportedProperty(category = "layout")
-    private float mWeightSum;
+    private float mWeightSum;//来源于xml
 
     @ViewDebug.ExportedProperty(category = "layout")
     private boolean mUseLargestChild;
@@ -362,6 +362,8 @@ public class LinearLayout extends ViewGroup {
             totalWeight += lp.weight;
             
             if (heightMode == MeasureSpec.EXACTLY && lp.height == 0 && lp.weight > 0) {
+            			
+            			//三个条件都要满足才有这个优化，，
                 // Optimization: don't bother measuring children who are going to use
                 // leftover space. These views will get measured again down below if
                 // there is any leftover space.
@@ -376,6 +378,7 @@ public class LinearLayout extends ViewGroup {
                     // Translate that to WRAP_CONTENT so that it does not end up
                     // with a height of 0
                     oldHeight = 0;
+                    //可能会修改孩子的布局参数，，，
                     lp.height = LayoutParams.WRAP_CONTENT;
                 }
 
@@ -421,6 +424,7 @@ public class LinearLayout extends ViewGroup {
 
             boolean matchWidthLocally = false;
             if (widthMode != MeasureSpec.EXACTLY && lp.width == LayoutParams.MATCH_PARENT) {
+            	//垂直线性布局，宽的尺寸不是精确的时候，只要有一个孩子的宽度想和这个线性布局一样大，那么这些孩子还会被再次测量。。。
                 // The width of the linear layout will scale, and at least one
                 // child said it wanted to match our width. Set a flag
                 // indicating that we need to remeasure at least that view when
@@ -428,7 +432,7 @@ public class LinearLayout extends ViewGroup {
                 matchWidth = true;
                 matchWidthLocally = true;
             }
-
+						//保存孩子中最大的宽度，，
             final int margin = lp.leftMargin + lp.rightMargin;
             final int measuredWidth = child.getMeasuredWidth() + margin;
             maxWidth = Math.max(maxWidth, measuredWidth);
@@ -482,16 +486,19 @@ public class LinearLayout extends ViewGroup {
         // Check against our minimum height
         heightSize = Math.max(heightSize, getSuggestedMinimumHeight());
         
+        //测量出来的高度和父view的要求的高度进行协商。。。
         // Reconcile our calculated size with the heightMeasureSpec
+        //有可能返回来的heightSize和之前的heightSize没有什么关系，，
         heightSize = resolveSize(heightSize, heightMeasureSpec);
         
         // Either expand children with weight to take up available space or
         // shrink them if they extend beyond our current bounds
         int delta = heightSize - mTotalLength;
         if (delta != 0 && totalWeight > 0.0f) {
+        	//这俩个变量的区别是什么？？？？？mWeightSum来源于xml,,totalWeight是计算出来的
             float weightSum = mWeightSum > 0.0f ? mWeightSum : totalWeight;
 
-            mTotalLength = 0;
+            mTotalLength = 0;///清零了一次，，，，，，
 
             for (int i = 0; i < count; ++i) {
                 final View child = getVirtualChildAt(i);
@@ -503,7 +510,9 @@ public class LinearLayout extends ViewGroup {
                 LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) child.getLayoutParams();
                 
                 float childExtra = lp.weight;
+                //对于有权重的子结点可能会测量俩次，，，，但是并不是所有有权重的之前都会跳过测量
                 if (childExtra > 0) {
+                	//设置了权重的子结点，，，
                     // Child said it could absorb extra space -- give him his share
                     int share = (int) (childExtra * delta / weightSum);
                     weightSum -= childExtra;
@@ -520,12 +529,13 @@ public class LinearLayout extends ViewGroup {
                         // base new measurement on stored values
                         int childHeight = child.getMeasuredHeight() + share;
                         if (childHeight < 0) {
-                            childHeight = 0;
+                            childHeight = 0;///高度也有可能为0，，但不会是负数，，
                         }
-                        
+                        //这一次高度是精确的，，
                         child.measure(childWidthMeasureSpec,
                                 MeasureSpec.makeMeasureSpec(childHeight, MeasureSpec.EXACTLY));
                     } else {
+                    	//之前跳过测量的，，，，也是精确的，，可以看到这个地方有可能精确的高度是0，，，
                         // child was skipped in the loop above.
                         // Measure for this first time here      
                         child.measure(childWidthMeasureSpec,
@@ -585,10 +595,11 @@ public class LinearLayout extends ViewGroup {
                LinearLayout.LayoutParams lp = ((LinearLayout.LayoutParams)child.getLayoutParams());
                
                if (lp.width == LayoutParams.MATCH_PARENT) {
+               			//要求和这个LinearLayout一样宽的，，，，
                    // Temporarily force children to reuse their old measured height
                    // FIXME: this may not be right for something like wrapping text?
                    int oldHeight = lp.height;
-                   lp.height = child.getMeasuredHeight();
+                   lp.height = child.getMeasuredHeight();//换成精确值，，
                    
                    // Remeasue with new dimensions
                    measureChildWithMargins(child, uniformMeasureSpec, 0, heightMeasureSpec, 0);
@@ -1043,6 +1054,7 @@ public class LinearLayout extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
+    		//可以看到这里完全不管传过来的参数，，，，
         if (mOrientation == VERTICAL) {
             layoutVertical();
         } else {
@@ -1065,7 +1077,7 @@ public class LinearLayout extends ViewGroup {
         int childLeft;
         
         // Where right end of child should go
-        final int width = mRight - mLeft;
+        final int width = mRight - mLeft;//setFrame里面保存的，，，
         int childRight = width - mPaddingRight;
         
         // Space available for child
@@ -1104,8 +1116,10 @@ public class LinearLayout extends ViewGroup {
                 
                 int gravity = lp.gravity;
                 if (gravity < 0) {
+                	//对于垂直方向的线性布局，孩子可以覆盖水平方向的gravity信息，，，
                     gravity = minorGravity;
                 }
+                //计算左边的坐标，，，
                 
                 switch (gravity & Gravity.HORIZONTAL_GRAVITY_MASK) {
                     case Gravity.LEFT:

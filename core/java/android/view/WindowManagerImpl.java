@@ -85,7 +85,7 @@ public class WindowManagerImpl implements WindowManager {
         addView(view, new WindowManager.LayoutParams(
             WindowManager.LayoutParams.TYPE_APPLICATION, 0, PixelFormat.OPAQUE));
     }
-
+		//添加view,,
     public void addView(View view, ViewGroup.LayoutParams params)
     {
         addView(view, params, false);
@@ -119,6 +119,8 @@ public class WindowManagerImpl implements WindowManager {
             // This is useful specifically for the notification manager,
             // which can continually add/remove the same view as a
             // notification gets updated.
+            
+            ////查找是否已经添加了，如果找到了，返回下标，
             int index = findViewLocked(view, false);
             if (index >= 0) {
                 if (!nest) {
@@ -132,7 +134,7 @@ public class WindowManagerImpl implements WindowManager {
                 root.setLayoutParams(wparams, true);
                 return;
             }
-            
+            //如果添加的是子窗口，，，
             // If this is a panel window, then find the window it is being
             // attached to for future reference.
             if (wparams.type >= WindowManager.LayoutParams.FIRST_SUB_WINDOW &&
@@ -144,7 +146,7 @@ public class WindowManagerImpl implements WindowManager {
                     }
                 }
             }
-            
+            //构造ViewRoot对象，，，
             root = new ViewRoot(view.getContext());
             root.mAddNesting = 1;
 
@@ -176,7 +178,7 @@ public class WindowManagerImpl implements WindowManager {
         // do this last because it fires off messages to start doing things
         root.setView(view, wparams, panelParentView);
     }
-
+		//更新布局参数，
     public void updateViewLayout(View view, ViewGroup.LayoutParams params) {
         if (!(params instanceof WindowManager.LayoutParams)) {
             throw new IllegalArgumentException("Params must be WindowManager.LayoutParams");
@@ -191,6 +193,7 @@ public class WindowManagerImpl implements WindowManager {
             int index = findViewLocked(view, true);
             ViewRoot root = mRoots[index];
             mParams[index] = wparams;
+            //第二个参数是false
             root.setLayoutParams(wparams, false);
         }
     }
@@ -341,7 +344,7 @@ public class WindowManagerImpl implements WindowManager {
             }
         }
     }
-
+		//查找是否已经添加了，如果找到了，返回下标，
     private int findViewLocked(View view, boolean required)
     {
         synchronized (this) {

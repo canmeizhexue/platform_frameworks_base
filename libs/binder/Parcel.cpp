@@ -148,6 +148,7 @@ status_t flatten_binder(const sp<ProcessState>& proc,
     const sp<IBinder>& binder, Parcel* out)
 {
     flat_binder_object obj;//创建一个对象，，
+    //发送到目的地前，type在驱动层会改变的，，
     
     obj.flags = 0x7f | FLAT_BINDER_FLAG_ACCEPTS_FDS;
     if (binder != NULL) {

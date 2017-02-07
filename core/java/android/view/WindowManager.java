@@ -840,7 +840,7 @@ public interface WindowManager extends ViewManager {
          * Identifier for this window.  This will usually be filled in for
          * you.
          */
-        public IBinder token = null;
+        public IBinder token = null;//对于Activity而言，这个是对应ActivityRecord
     
         /**
          * Name of the package owning this window.
@@ -862,6 +862,7 @@ public interface WindowManager extends ViewManager {
             super(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
             type = TYPE_APPLICATION;
             format = PixelFormat.OPAQUE;
+            //默认构造函数不会操作token
         }
         
         public LayoutParams(int _type) {
@@ -994,7 +995,7 @@ public interface WindowManager extends ViewManager {
     
         // internal buffer to backup/restore parameters under compatibility mode.
         private int[] mCompatibilityParamsBackup = null;
-        
+        //字段值不一样就复制，，，
         public final int copyFrom(LayoutParams o) {
             int changes = 0;
     

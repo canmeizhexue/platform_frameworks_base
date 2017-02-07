@@ -155,7 +155,7 @@ public final class ActivityThread {
     // set of instantiated backup agents, keyed by package name
     final HashMap<String, BackupAgent> mBackupAgents = new HashMap<String, BackupAgent>();
     static final ThreadLocal<ActivityThread> sThreadLocal = new ThreadLocal();
-    Instrumentation mInstrumentation;
+    Instrumentation mInstrumentation;//整个进程只有一个，要么是默认的，要么是用户指定的，，
     String mInstrumentationAppDir = null;
     String mInstrumentationAppPackage = null;
     String mInstrumentedAppDir = null;
@@ -192,7 +192,7 @@ public final class ActivityThread {
     boolean mGcIdlerScheduled = false;
 
     static Handler sMainThreadHandler;  // set once in main()
-
+		//在app端描述一个Activity,
     private static final class ActivityClientRecord {
         IBinder token;
         int ident;
@@ -363,7 +363,7 @@ public final class ActivityThread {
         String path;
         ParcelFileDescriptor fd;
     }
-
+		//ApplicationThread会被传递给AMS,用来回调，
     private final class ApplicationThread extends ApplicationThreadNative {
         private static final String HEAP_COLUMN = "%17s %8s %8s %8s %8s";
         private static final String ONE_COUNT_COLUMN = "%17s %8d";
@@ -406,7 +406,7 @@ public final class ActivityThread {
             res.results = results;
             queueOrSendMessage(H.SEND_RESULT, res);
         }
-
+				//启动一个Activity,,,
         // we use token to identify this activity without having to send the
         // activity itself back to the activity manager. (matters more with ipc)
         public final void scheduleLaunchActivity(Intent intent, IBinder token, int ident,
@@ -414,14 +414,14 @@ public final class ActivityThread {
                 List<Intent> pendingNewIntents, boolean notResumed, boolean isForward) {
             ActivityClientRecord r = new ActivityClientRecord();
 
-            r.token = token;
+            r.token = token; // 对应AMS中的ActivityRecord
             r.ident = ident;
-            r.intent = intent;
-            r.activityInfo = info;
-            r.state = state;
+            r.intent = intent; // 启动这个Activity的intent
+            r.activityInfo = info; // 对应的Activity信息，
+            r.state = state; // 之前保存的状态，
 
-            r.pendingResults = pendingResults;
-            r.pendingIntents = pendingNewIntents;
+            r.pendingResults = pendingResults;  // 之前保存的结果
+            r.pendingIntents = pendingNewIntents; // 保存的新发来的intent
 
             r.startsNotResumed = notResumed;
             r.isForward = isForward;
@@ -841,7 +841,7 @@ public final class ActivityThread {
             pw.println(String.format(format, objs));
         }
     }
-
+		//主线程的Handler
     private final class H extends Handler {
         public static final int LAUNCH_ACTIVITY         = 100;
         public static final int PAUSE_ACTIVITY          = 101;
@@ -1533,16 +1533,19 @@ public final class ActivityThread {
         cci.what = what;
         queueOrSendMessage(H.CLEAN_UP_CONTEXT, cci);
     }
-
+		//启动Activity,,对于LAUNCH_ACTIVITY消息时，第二个参数为null
     private final Activity performLaunchActivity(ActivityClientRecord r, Intent customIntent) {
         // System.out.println("##### [" + System.currentTimeMillis() + "] ActivityThread.performLaunchActivity(" + r + ")");
 
         ActivityInfo aInfo = r.activityInfo;
+        //获取包信息，
         if (r.packageInfo == null) {
             r.packageInfo = getPackageInfo(aInfo.applicationInfo,
                     Context.CONTEXT_INCLUDE_CODE);
         }
-
+        
+        //寻找目标Activity,,,,
+				//r.intent代表启动目标Activity的intent,,,
         ComponentName component = r.intent.getComponent();
         if (component == null) {
             component = r.intent.resolveActivity(
@@ -1555,9 +1558,14 @@ public final class ActivityThread {
                     r.activityInfo.targetActivity);
         }
 
+
+
         Activity activity = null;
         try {
+        		//packageInfo里面的classLoader
             java.lang.ClassLoader cl = r.packageInfo.getClassLoader();
+            
+            //加载指定的Activity，然后反射构造Activity
             activity = mInstrumentation.newActivity(
                     cl, component.getClassName(), r.intent);
             r.intent.setExtrasClassLoader(cl);
@@ -1573,6 +1581,7 @@ public final class ActivityThread {
         }
 
         try {
+        		//获取Application
             Application app = r.packageInfo.makeApplication(false, mInstrumentation);
 
             if (localLOGV) Slog.v(TAG, "Performing launch of " + r);
@@ -1584,13 +1593,20 @@ public final class ActivityThread {
                     + ", dir=" + r.packageInfo.getAppDir());
 
             if (activity != null) {
+            	//为Activity构造一个ContextImpl
                 ContextImpl appContext = new ContextImpl();
+                //r.token代表对应的ActivityRecord
                 appContext.init(r.packageInfo, r.token, this);
                 appContext.setOuterContext(activity);
+                
+                
                 CharSequence title = r.activityInfo.loadLabel(appContext.getPackageManager());
                 Configuration config = new Configuration(mConfiguration);
                 if (DEBUG_CONFIGURATION) Slog.v(TAG, "Launching activity "
                         + r.activityInfo.name + " with config " + config);
+                
+                
+                //attach操作，，，
                 activity.attach(appContext, this, getInstrumentation(), r.token,
                         r.ident, app, r.intent, r.activityInfo, title, r.parent,
                         r.embeddedID, r.lastNonConfigurationInstance,
@@ -1601,13 +1617,17 @@ public final class ActivityThread {
                 }
                 r.lastNonConfigurationInstance = null;
                 r.lastNonConfigurationChildInstances = null;
-                activity.mStartedActivity = false;
+                activity.mStartedActivity = false;  //设置为false
                 int theme = r.activityInfo.getThemeResource();
+                
+                //设置主题，，，
                 if (theme != 0) {
                     activity.setTheme(theme);
                 }
 
                 activity.mCalled = false;
+                
+                //调用onCreate,,,,,
                 mInstrumentation.callActivityOnCreate(activity, r.state);
                 if (!activity.mCalled) {
                     throw new SuperNotCalledException(
@@ -1617,16 +1637,21 @@ public final class ActivityThread {
                 r.activity = activity;
                 r.stopped = true;
                 if (!r.activity.mFinished) {
+                	
+                	
+                	//调用performStart
                     activity.performStart();
                     r.stopped = false;
                 }
                 if (!r.activity.mFinished) {
                     if (r.state != null) {
+                    		//恢复数据，，，，
                         mInstrumentation.callActivityOnRestoreInstanceState(activity, r.state);
                     }
                 }
                 if (!r.activity.mFinished) {
                     activity.mCalled = false;
+                    // 调用postCreate,,,
                     mInstrumentation.callActivityOnPostCreate(activity, r.state);
                     if (!activity.mCalled) {
                         throw new SuperNotCalledException(
@@ -1635,8 +1660,9 @@ public final class ActivityThread {
                     }
                 }
             }
+            //目前是暂停状态，，，
             r.paused = true;
-
+						//保存Activity，，key是Activity对应的ActivityRecord
             mActivities.put(r.token, r);
 
         } catch (SuperNotCalledException e) {
@@ -1652,7 +1678,7 @@ public final class ActivityThread {
 
         return activity;
     }
-
+		//处理启动Activity,来自LAUNCH_ACTIVITY消息时，第二个参数为null
     private final void handleLaunchActivity(ActivityClientRecord r, Intent customIntent) {
         // If we are getting ready to gc after going to the background, well
         // we are back active so skip it.
@@ -1660,11 +1686,16 @@ public final class ActivityThread {
 
         if (localLOGV) Slog.v(
             TAG, "Handling launch of " + r);
+        
+        //启动Activity,
         Activity a = performLaunchActivity(r, customIntent);
 
         if (a != null) {
             r.createdConfig = new Configuration(mConfiguration);
             Bundle oldState = r.state;
+            
+            
+            //resume操作，，第二个参数是false
             handleResumeActivity(r.token, false, r.isForward);
 
             if (!r.activity.mFinished && r.startsNotResumed) {
@@ -1677,6 +1708,8 @@ public final class ActivityThread {
                 // we do -not- need to do the full pause cycle (of freezing
                 // and such) because the activity manager assumes it can just
                 // retain the current state it has.
+                //窗口显示出来之前会执行onResume，，，
+                //这种情况下，不需要完全的pause(比如保存状态，)
                 try {
                     r.activity.mCalled = false;
                     mInstrumentation.callActivityOnPause(r.activity);
@@ -1703,6 +1736,7 @@ public final class ActivityThread {
                 r.paused = true;
             }
         } else {
+        		//启动失败也会告诉AMS,
             // If there was an error, for any reason, tell the activity
             // manager to stop us.
             try {
@@ -1712,7 +1746,7 @@ public final class ActivityThread {
             }
         }
     }
-
+		//将新的intent发送给Activity,,,
     private final void deliverNewIntents(ActivityClientRecord r,
             List<Intent> intents) {
         final int N = intents.size();
@@ -2087,7 +2121,7 @@ public final class ActivityThread {
         }
         //Slog.i(TAG, "Running services: " + mServices);
     }
-
+		//对于LAUNCH_ACTIVITY消息，第二个参数为false,
     public final ActivityClientRecord performResumeActivity(IBinder token,
             boolean clearHide) {
         ActivityClientRecord r = mActivities.get(token);
@@ -2099,14 +2133,20 @@ public final class ActivityThread {
                 r.activity.mStartedActivity = false;
             }
             try {
+            		//发送之前保留的intents
                 if (r.pendingIntents != null) {
                     deliverNewIntents(r, r.pendingIntents);
                     r.pendingIntents = null;
                 }
+                //发送之前保存的结果，，比如之前A页面启动B页面，并且想要结果，然后B页面需要消耗大量内存把A页面杀死了，B页面点击返回的时候再启动A页面，这个时候就需要把结果发给A页面，
+                //可以看到发送结果在onResume之前执行，，
                 if (r.pendingResults != null) {
                     deliverResults(r, r.pendingResults);
                     r.pendingResults = null;
                 }
+                
+                
+                //这个里面会间接调用onResume
                 r.activity.performResume();
 
                 EventLog.writeEvent(LOG_ON_RESUME_CALLED,
@@ -2126,7 +2166,7 @@ public final class ActivityThread {
         }
         return r;
     }
-
+		//对于LAUNCH_ACTIVITY消息，第二个参数为false,
     final void handleResumeActivity(IBinder token, boolean clearHide, boolean isForward) {
         // If we are getting ready to gc after going to the background, well
         // we are back active so skip it.
@@ -2157,16 +2197,25 @@ public final class ActivityThread {
                 }
             }
             if (r.window == null && !a.mFinished && willBeVisible) {
+            	//保存的是PhoneWindow,,,
                 r.window = r.activity.getWindow();
                 View decor = r.window.getDecorView();
                 decor.setVisibility(View.INVISIBLE);
+                //返回的其实是LocalWindowManager,,,
                 ViewManager wm = a.getWindowManager();
                 WindowManager.LayoutParams l = r.window.getAttributes();
                 a.mDecor = decor;
+                //Activity类型的窗口被修改为TYPE_BASE_APPLICATION
                 l.type = WindowManager.LayoutParams.TYPE_BASE_APPLICATION;
                 l.softInputMode |= forwardBit;
+                
+                
+                //下面这个标记默认为true,在Activity的onCreate里面可能修改这个字段，，
                 if (a.mVisibleFromClient) {
+                	
                     a.mWindowAdded = true;
+                    
+                    //添加窗口，，这会导致创建ViewRoot,间接调用WMS的函数，
                     wm.addView(decor, l);
                 }
 
@@ -2218,6 +2267,7 @@ public final class ActivityThread {
             Looper.myQueue().addIdleHandler(new Idler());
 
         } else {
+        	//出现异常情况，，，
             // If an exception was thrown when trying to resume, then
             // just end this activity.
             try {
@@ -2514,7 +2564,7 @@ public final class ActivityThread {
             updateVisibility(r, show);
         }
     }
-
+		//发送结果，，
     private final void deliverResults(ActivityClientRecord r, List<ResultInfo> results) {
         final int N = results.size();
         for (int i=0; i<N; i++) {
@@ -2525,6 +2575,7 @@ public final class ActivityThread {
                 }
                 if (DEBUG_RESULTS) Slog.v(TAG,
                         "Delivering result to activity " + r + " : " + ri);
+                //发送结果，，，
                 r.activity.dispatchActivityResult(ri.mResultWho,
                         ri.mRequestCode, ri.mResultCode, ri.mData);
             } catch (Exception e) {
@@ -3191,7 +3242,7 @@ public final class ActivityThread {
                       + " can be debugged on port 8100...");
             }
         }
-
+				//有指定的Instrumentation
         if (data.instrumentationName != null) {
             ContextImpl appContext = new ContextImpl();
             appContext.init(data.info, null, this);
@@ -3252,6 +3303,7 @@ public final class ActivityThread {
             }
 
         } else {
+        		//一般我们不指定Instrumentation，，，，
             mInstrumentation = new Instrumentation();
         }
 
@@ -3591,6 +3643,7 @@ public final class ActivityThread {
         sThreadLocal.set(this);
         mSystemThread = system;
         if (!system) {
+        	//一般应用程序进程
             ViewRoot.addFirstDrawHandler(new Runnable() {
                 public void run() {
                     ensureJitEnabled();

@@ -735,7 +735,7 @@ public class Activity extends ContextThemeWrapper
         return mWindowManager;
     }
 
-    /**
+    /**返回的一般是PhoneWindow，，在attach里面创建的，
      * Retrieve the current {@link android.view.Window} for the activity.
      * This can be used to directly access parts of the Window API that
      * are not available through Activity/Screen.
@@ -804,7 +804,7 @@ public class Activity extends ContextThemeWrapper
         mCalled = true;
     }
 
-    /**
+    /**恢复状态，
      * The hook for {@link ActivityThread} to restore the state of this activity.
      *
      * Calls {@link #onSaveInstanceState(android.os.Bundle)} and
@@ -3189,7 +3189,7 @@ public class Activity extends ContextThemeWrapper
         }
     }
 
-    /**
+    /**可以修改mVisibleFromClient
      * Control whether this activity's main window is visible.  This is intended
      * only for the special case of an activity that is not going to show a
      * UI itself, but can't just finish prior to onResume() because it needs
@@ -3208,7 +3208,7 @@ public class Activity extends ContextThemeWrapper
             }
         }
     }
-    
+    //标识可见，，，
     void makeVisible() {
         if (!mWindowAdded) {
             ViewManager wm = getWindowManager();
@@ -3735,7 +3735,7 @@ public class Activity extends ContextThemeWrapper
     final void setParent(Activity parent) {
         mParent = parent;
     }
-
+		//attach操作
     final void attach(Context context, ActivityThread aThread, Instrumentation instr, IBinder token,
             Application application, Intent intent, ActivityInfo info, CharSequence title, 
             Activity parent, String id, Object lastNonConfigurationInstance,
@@ -3743,7 +3743,12 @@ public class Activity extends ContextThemeWrapper
         attach(context, aThread, instr, token, 0, application, intent, info, title, parent, id,
             lastNonConfigurationInstance, null, config);
     }
-    
+    //attach操作
+    //参数context其实是ContextImpl
+    //参数token其实是对应ActivityRecord
+    //参数intent代表启动这个Activity的intent
+    //参数info描述这个Activity的信息，，
+    //参数config代表配置信息，，
     final void attach(Context context, ActivityThread aThread,
             Instrumentation instr, IBinder token, int ident,
             Application application, Intent intent, ActivityInfo info,
@@ -3751,8 +3756,11 @@ public class Activity extends ContextThemeWrapper
             Object lastNonConfigurationInstance,
             HashMap<String,Object> lastNonConfigurationChildInstances,
             Configuration config) {
+            	
+        //保存ContextImpl
         attachBaseContext(context);
-
+				
+				//构建Window对象，，，策略管理，，这个地方构造的是PhoneWindow,并且传入了Activity,
         mWindow = PolicyManager.makeNewWindow(this);
         mWindow.setCallback(this);
         if (info.softInputMode != WindowManager.LayoutParams.SOFT_INPUT_STATE_UNSPECIFIED) {
@@ -3773,11 +3781,13 @@ public class Activity extends ContextThemeWrapper
         mEmbeddedID = id;
         mLastNonConfigurationInstance = lastNonConfigurationInstance;
         mLastNonConfigurationChildInstances = lastNonConfigurationChildInstances;
-
+				
+				//设置窗口管理，，，mToken其实也是对应的ActivityRecord
         mWindow.setWindowManager(null, mToken, mComponent.flattenToString());
         if (mParent != null) {
             mWindow.setContainer(mParent.getWindow());
         }
+        //返回的是一个Window类的LocalWindowManager,,,
         mWindowManager = mWindow.getWindowManager();
         mCurrentConfig = config;
     }
@@ -3785,7 +3795,7 @@ public class Activity extends ContextThemeWrapper
     final IBinder getActivityToken() {
         return mParent != null ? mParent.getActivityToken() : mToken;
     }
-
+		//里面会调用activity的onStart
     final void performStart() {
         mCalled = false;
         mInstrumentation.callActivityOnStart(this);
@@ -3821,14 +3831,16 @@ public class Activity extends ContextThemeWrapper
             performStart();
         }
     }
-    
+    //可以看到很多在Activity里面调用的函数都是perform开头的，，
     final void performResume() {
+    	//可以看到这里调用了performRestart,,,
         performRestart();
         
         mLastNonConfigurationInstance = null;
         
         mCalled = false;
         // mResumed is set by the instrumentation
+        //这个里面会调用onResume，，并且设置mResumed标记，，
         mInstrumentation.callActivityOnResume(this);
         if (!mCalled) {
             throw new SuperNotCalledException(
@@ -3898,7 +3910,7 @@ public class Activity extends ContextThemeWrapper
     public final boolean isResumed() {
         return mResumed;
     }
-
+		//发送结果，，，
     void dispatchActivityResult(String who, int requestCode, 
         int resultCode, Intent data) {
         if (Config.LOGV) Log.v(

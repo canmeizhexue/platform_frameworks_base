@@ -5567,7 +5567,7 @@ public class WindowManagerService extends IWindowManager.Stub
     // -------------------------------------------------------------
     // Client Session State
     // -------------------------------------------------------------
-
+		//每个进程只有一个Session对象，
     private final class Session extends IWindowSession.Stub
             implements IBinder.DeathRecipient {
         final IInputMethodClient mClient;
@@ -5652,7 +5652,7 @@ public class WindowManagerService extends IWindowManager.Stub
                 killSessionLocked();
             }
         }
-
+				//添加窗口，，，，
         public int add(IWindow window, WindowManager.LayoutParams attrs,
                 int viewVisibility, Rect outContentInsets, InputChannel outInputChannel) {
             return addWindow(this, window, attrs, viewVisibility, outContentInsets,

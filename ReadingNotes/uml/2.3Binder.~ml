@@ -3586,9 +3586,9 @@ flat_binder_object的binder字段和cookie字段
 <XPD:ATTR name="FillColor" type="string">$00B9FFFF</XPD:ATTR>
 <XPD:ATTR name="Left" type="integer">2316</XPD:ATTR>
 <XPD:ATTR name="Top" type="integer">1188</XPD:ATTR>
-<XPD:ATTR name="Width" type="integer">137</XPD:ATTR>
+<XPD:ATTR name="Width" type="integer">265</XPD:ATTR>
 <XPD:ATTR name="Height" type="integer">23</XPD:ATTR>
-<XPD:ATTR name="Text" type="string">类型为BC_TRANSACTION
+<XPD:ATTR name="Text" type="string">类型为BC_TRANSACTION，handle标识给谁发数据
 </XPD:ATTR>
 </XPD:OBJ>
 <XPD:OBJ name="OwnedViews[54]" type="UMLSeqStimulusView" guid="qhmdDtq67Ea5sWy8/PQ1uAAA">

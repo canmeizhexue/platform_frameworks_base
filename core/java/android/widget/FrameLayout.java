@@ -238,6 +238,7 @@ public class FrameLayout extends ViewGroup {
      */
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+    	
         final int count = getChildCount();
 
         int maxHeight = 0;
@@ -246,7 +247,9 @@ public class FrameLayout extends ViewGroup {
         // Find rightmost and bottommost child
         for (int i = 0; i < count; i++) {
             final View child = getChildAt(i);
+            //强制测量所有的子view还是只测量不是GONE状态的子View，
             if (mMeasureAllChildren || child.getVisibility() != GONE) {
+            		//这个里面会考虑当前viewGroup的padding值，，，，
                 measureChildWithMargins(child, widthMeasureSpec, 0, heightMeasureSpec, 0);
                 maxWidth = Math.max(maxWidth, child.getMeasuredWidth());
                 maxHeight = Math.max(maxHeight, child.getMeasuredHeight());
@@ -267,12 +270,14 @@ public class FrameLayout extends ViewGroup {
             maxHeight = Math.max(maxHeight, drawable.getMinimumHeight());
             maxWidth = Math.max(maxWidth, drawable.getMinimumWidth());
         }
-
+				//目前maxWidth是这个FrameLayout想要的宽，需要调用resolveSize来和父类的要求一起决定大小，，，
+				
+				//如果之前父view已经明确告知了我该多大，，那么我就应该是多大，，
         setMeasuredDimension(resolveSize(maxWidth, widthMeasureSpec),
                 resolveSize(maxHeight, heightMeasureSpec));
     }
  
-    /**
+    /**布局，放置位置，，，
      * {@inheritDoc}
      */
     @Override
@@ -280,7 +285,8 @@ public class FrameLayout extends ViewGroup {
         final int count = getChildCount();
 
         final int parentLeft = mPaddingLeft + mForegroundPaddingLeft;
-        final int parentRight = right - left - mPaddingRight - mForegroundPaddingRight;
+        //right-left就相当于这个FrameLayout的右边界在这个FrameLayout里面的坐标了，原点在FrameLayout的左上角，进行坐标转换。。。
+        final int parentRight = right - left - mPaddingRight - mForegroundPaddingRight;//注意这个地方是用right-left来计算的，而不是当前这个FrameLayout的测量出来的宽，
 
         final int parentTop = mPaddingTop + mForegroundPaddingTop;
         final int parentBottom = bottom - top - mPaddingBottom - mForegroundPaddingBottom;
@@ -292,8 +298,8 @@ public class FrameLayout extends ViewGroup {
             if (child.getVisibility() != GONE) {
                 final LayoutParams lp = (LayoutParams) child.getLayoutParams();
 
-                final int width = child.getMeasuredWidth();
-                final int height = child.getMeasuredHeight();
+                final int width = child.getMeasuredWidth();//是之前测量出来的宽度
+                final int height = child.getMeasuredHeight();//是之前测量出来的高度，
 
                 int childLeft = parentLeft;
                 int childTop = parentTop;

@@ -1002,7 +1002,7 @@ public class Instrumentation {
         return activity;
     }
 
-    /**
+    /**加载指定的Activity，然后反射构造Activity
      * Perform instantiation of the process's {@link Activity} object.  The
      * default implementation provides the normal system behavior.
      * 
@@ -1021,7 +1021,7 @@ public class Instrumentation {
         return (Activity)cl.loadClass(className).newInstance();
     }
 
-    /**
+    /**调用onCreate方法，，
      * Perform calling of an activity's {@link Activity#onCreate}
      * method.  The default implementation simply calls through to that method.
      * 
@@ -1108,7 +1108,7 @@ public class Instrumentation {
         activity.onPostCreate(icicle);
     }
 
-    /**
+    /**调用Activity的onNewIntent,,
      * Perform calling of an activity's {@link Activity#onNewIntent}
      * method.  The default implementation simply calls through to that method.
      * 
@@ -1119,7 +1119,7 @@ public class Instrumentation {
         activity.onNewIntent(intent);
     }
 
-    /**
+    /**调用onStart
      * Perform calling of an activity's {@link Activity#onStart}
      * method.  The default implementation simply calls through to that method.
      * 
@@ -1139,7 +1139,7 @@ public class Instrumentation {
         activity.onRestart();
     }
 
-    /**
+    /**调用onResume，并且标记mResumed为true
      * Perform calling of an activity's {@link Activity#onResume} method.  The
      * default implementation simply calls through to that method.
      * 
