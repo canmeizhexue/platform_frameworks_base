@@ -65,6 +65,8 @@ extern "C" status_t system_init()
     
     char propBuf[PROPERTY_VALUE_MAX];
     property_get("system_init.startsurfaceflinger", propBuf, "1");
+    
+    //SystemServer进程启动C层写的服务，，，包括SurfaceFlinger,,,,
     if (strcmp(propBuf, "1") == 0) {
         // Start the SurfaceFlinger
         SurfaceFlinger::instantiate();
@@ -101,6 +103,7 @@ extern "C" status_t system_init()
     AndroidRuntime* runtime = AndroidRuntime::getRuntime();
 
     LOGI("System server: starting Android services.\n");
+    //回调java层代码，，，，
     runtime->callStatic("com/android/server/SystemServer", "init2");
         
     // If running in our own process, just go into the thread
@@ -109,7 +112,7 @@ extern "C" status_t system_init()
     if (proc->supportsProcesses()) {
         LOGI("System server: entering thread pool.\n");
         ProcessState::self()->startThreadPool();
-        IPCThreadState::self()->joinThreadPool();
+        IPCThreadState::self()->joinThreadPool();//当前线程加入到Binder线程池中，，
         LOGI("System server: exiting thread pool.\n");
     }
     return NO_ERROR;

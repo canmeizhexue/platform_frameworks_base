@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XPD:PROJECT xmlns:XPD="http://www.staruml.com" version="1">
+<XPD:HEADER>
+<XPD:SUBUNITS>
+</XPD:SUBUNITS>
+<XPD:PROFILES>
+<XPD:PROFILE>UMLStandard</XPD:PROFILE>
+<XPD:PROFILE>Java</XPD:PROFILE>
+<XPD:PROFILE>Cpp</XPD:PROFILE>
+</XPD:PROFILES>
+</XPD:HEADER>
+<XPD:BODY>
+<XPD:OBJ name="DocumentElement" type="UMLProject" guid="3MWe6cEOK0e3SX7y/4OMrQAA">
+<XPD:ATTR name="Title" type="string">2.3Context</XPD:ATTR>
+<XPD:ATTR name="#OwnedElements" type="integer">2</XPD:ATTR>
+<XPD:OBJ name="OwnedElements[0]" type="UMLModel" guid="ydIhENDM+0iz5GWtpYXJggAA">
+<XPD:ATTR name="Name" type="string">Requirements</XPD:ATTR>
+<XPD:REF name="Namespace">3MWe6cEOK0e3SX7y/4OMrQAA</XPD:REF>
+<XPD:ATTR name="#OwnedElements" type="integer">2</XPD:ATTR>
+<XPD:OBJ name="OwnedElements[0]" type="UMLModel" guid="O/GbDSJdOkGxRYI/uFMc5QAA">
+<XPD:ATTR name="Name" type="string">Business Concept Model</XPD:ATTR>
+<XPD:REF name="Namespace">ydIhENDM+0iz5GWtpYXJggAA</XPD:REF>
+<XPD:ATTR name="#OwnedDiagrams" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedDiagrams[0]" type="UMLClassDiagram" guid="6GGGpY106kOr9e9Oq++5GwAA">
+<XPD:ATTR name="Name" type="string">Business Concept Diagram</XPD:ATTR>
+<XPD:REF name="DiagramOwner">O/GbDSJdOkGxRYI/uFMc5QAA</XPD:REF>
+<XPD:OBJ name="DiagramView" type="UMLClassDiagramView" guid="3pqXjuZUqE+vc70KZDAGfAAA">
+<XPD:REF name="Diagram">6GGGpY106kOr9e9Oq++5GwAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+<XPD:OBJ name="OwnedElements[1]" type="UMLModel" guid="rUF9DZoLWkqWlJfG7l3eWQAA">
+<XPD:ATTR name="Name" type="string">Use Case Model</XPD:ATTR>
+<XPD:REF name="Namespace">ydIhENDM+0iz5GWtpYXJggAA</XPD:REF>
+<XPD:ATTR name="#OwnedDiagrams" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedDiagrams[0]" type="UMLUseCaseDiagram" guid="9BgSQNP+zkWZLa7paiVM7QAA">
+<XPD:ATTR name="Name" type="string">Use Case Diagram</XPD:ATTR>
+<XPD:ATTR name="DefaultDiagram" type="boolean">True</XPD:ATTR>
+<XPD:REF name="DiagramOwner">rUF9DZoLWkqWlJfG7l3eWQAA</XPD:REF>
+<XPD:OBJ name="DiagramView" type="UMLUseCaseDiagramView" guid="OwPuspxGFkC/km/GJwj78AAA">
+<XPD:REF name="Diagram">9BgSQNP+zkWZLa7paiVM7QAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+<XPD:OBJ name="OwnedElements[1]" type="UMLModel" guid="2sU6N/YMO0OsuQnmcqo8AQAA">
+<XPD:ATTR name="Name" type="string">Specifications</XPD:ATTR>
+<XPD:REF name="Namespace">3MWe6cEOK0e3SX7y/4OMrQAA</XPD:REF>
+<XPD:ATTR name="#OwnedElements" type="integer">4</XPD:ATTR>
+<XPD:OBJ name="OwnedElements[0]" type="UMLModel" guid="ksPzuwEfkUSm9cIl+oyEqQAA">
+<XPD:ATTR name="Name" type="string">Business Type Model</XPD:ATTR>
+<XPD:REF name="Namespace">2sU6N/YMO0OsuQnmcqo8AQAA</XPD:REF>
+<XPD:ATTR name="#OwnedDiagrams" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedDiagrams[0]" type="UMLClassDiagram" guid="OadLibGqwECeFi/Ylv0jiAAA">
+<XPD:ATTR name="Name" type="string">Business Type Model Diagram</XPD:ATTR>
+<XPD:REF name="DiagramOwner">ksPzuwEfkUSm9cIl+oyEqQAA</XPD:REF>
+<XPD:OBJ name="DiagramView" type="UMLClassDiagramView" guid="TGjFLjarpEenf2yNvwMvygAA">
+<XPD:REF name="Diagram">OadLibGqwECeFi/Ylv0jiAAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+<XPD:OBJ name="OwnedElements[1]" type="UMLModel" guid="PC/DGQDOVU+oFL9WmUoLBAAA">
+<XPD:ATTR name="Name" type="string">Interface Specifications</XPD:ATTR>
+<XPD:REF name="Namespace">2sU6N/YMO0OsuQnmcqo8AQAA</XPD:REF>
+</XPD:OBJ>
+<XPD:OBJ name="OwnedElements[2]" type="UMLModel" guid="zvBMFMnOAkqmEa1T5hODKwAA">
+<XPD:ATTR name="Name" type="string">Component Specifications</XPD:ATTR>
+<XPD:REF name="Namespace">2sU6N/YMO0OsuQnmcqo8AQAA</XPD:REF>
+</XPD:OBJ>
+<XPD:OBJ name="OwnedElements[3]" type="UMLModel" guid="0tSr2pZ5AESh86BkTPzQ1gAA">
+<XPD:ATTR name="Name" type="string">Component Architecture</XPD:ATTR>
+<XPD:REF name="Namespace">2sU6N/YMO0OsuQnmcqo8AQAA</XPD:REF>
+<XPD:ATTR name="#OwnedDiagrams" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedDiagrams[0]" type="UMLComponentDiagram" guid="gVtbw6tzeUubfkA0LZt92wAA">
+<XPD:ATTR name="Name" type="string">Component Architecture Diagram</XPD:ATTR>
+<XPD:ATTR name="DefaultDiagram" type="boolean">True</XPD:ATTR>
+<XPD:REF name="DiagramOwner">0tSr2pZ5AESh86BkTPzQ1gAA</XPD:REF>
+<XPD:OBJ name="DiagramView" type="UMLComponentDiagramView" guid="OEeBhD7DEkWdiWZyRrfkawAA">
+<XPD:REF name="Diagram">gVtbw6tzeUubfkA0LZt92wAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+<XPD:ATTR name="#OwnedElements" type="integer">1</XPD:ATTR>
+<XPD:OBJ name="OwnedElements[0]" type="UMLModel" guid="AtBbyNAJEkWRfwByYc0EmQAA">
+<XPD:ATTR name="Name" type="string">Interactions</XPD:ATTR>
+<XPD:REF name="Namespace">0tSr2pZ5AESh86BkTPzQ1gAA</XPD:REF>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:OBJ>
+</XPD:BODY>
+</XPD:PROJECT>

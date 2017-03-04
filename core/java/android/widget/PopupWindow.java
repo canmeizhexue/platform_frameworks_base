@@ -806,7 +806,7 @@ public class PopupWindow {
         mIsShowing = true;
         mIsDropdown = true;
 
-        WindowManager.LayoutParams p = createPopupLayout(anchor.getWindowToken());
+        WindowManager.LayoutParams p = createPopupLayout(anchor.getWindowToken());//父窗口的W对象，，
         preparePopup(p);
 
         updateAboveAnchor(findDropDownPosition(anchor, p, xoff, yoff));

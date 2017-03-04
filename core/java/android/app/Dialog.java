@@ -73,7 +73,7 @@ public class Dialog implements DialogInterface, Window.Callback,
     private Activity mOwnerActivity;
     
     final Context mContext;
-    final WindowManager mWindowManager;
+    final WindowManager mWindowManager;  //其实是LocalWindowManager,,
     Window mWindow;
     View mDecor;
     /**
@@ -138,11 +138,11 @@ public class Dialog implements DialogInterface, Window.Callback,
     public Dialog(Context context, int theme) {
         mContext = new ContextThemeWrapper(
             context, theme == 0 ? com.android.internal.R.style.Theme_Dialog : theme);
-        mWindowManager = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE);
-        Window w = PolicyManager.makeNewWindow(mContext);
+        mWindowManager = (WindowManager)context.getSystemService(Context.WINDOW_SERVICE); //返回的是LocalWindowManager,因为context一般而言是Activity，而在Activity里面覆盖了这个函数，，,,,
+        Window w = PolicyManager.makeNewWindow(mContext);  //返回的是PhoneWindow,,,,
         mWindow = w;
         w.setCallback(this);
-        w.setWindowManager(mWindowManager, null, null);
+        w.setWindowManager(mWindowManager, null, null);  //LocalWindowManager---->LocalWindowManager----->WindowManagerImpl
         w.setGravity(Gravity.CENTER);
         mUiThread = Thread.currentThread();
         mListenersHandler = new ListenersHandler(this);
@@ -238,6 +238,7 @@ public class Dialog implements DialogInterface, Window.Callback,
         }
 
         try {
+        		//这个字段的值是LocalWindowManager,,,,
             mWindowManager.addView(mDecor, l);
             mShowing = true;
     

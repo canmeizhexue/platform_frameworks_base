@@ -1508,7 +1508,7 @@ class ContextImpl extends Context {
         }
         return file;
     }
-
+		//系统级的ContextImpl对应的Resources也是系统级的，，，
     static ContextImpl createSystemContext(ActivityThread mainThread) {
         ContextImpl context = new ContextImpl();
         context.init(Resources.getSystem(), mainThread);
@@ -1535,7 +1535,7 @@ class ContextImpl extends Context {
         mContentResolver = context.mContentResolver;
         mOuterContext = this;
     }
-
+		//参数activityToken对于Service和Application等情况而言是null,,对于Activity而言不是null,
     final void init(LoadedApk packageInfo,
             IBinder activityToken, ActivityThread mainThread) {
         init(packageInfo, activityToken, mainThread, null);

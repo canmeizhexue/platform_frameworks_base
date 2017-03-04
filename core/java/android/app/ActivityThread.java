@@ -1191,7 +1191,8 @@ public final class ActivityThread {
         //    Slog.w(TAG, "Throwing away out-of-date resources!!!! "
         //            + r + " " + resDir);
         //}
-
+        
+				//从这个地方可以看到是把资源的路径添加进去的，，，插件里面的资源也是用这种机制，，，
         AssetManager assets = new AssetManager();
         if (assets.addAssetPath(resDir) == 0) {
             return null;
@@ -1222,7 +1223,7 @@ public final class ActivityThread {
         }
     }
 
-    /**
+    /**获取资源对象，
      * Creates the top level resources for the given package.
      */
     Resources getTopLevelResources(String resDir, LoadedApk pkgInfo) {
@@ -1232,10 +1233,11 @@ public final class ActivityThread {
     final Handler getHandler() {
         return mH;
     }
-
+		//获取包名对应的LoadedApk,可能通过字符串向PMS查询ApplicationInfo信息
     public final LoadedApk getPackageInfo(String packageName, int flags) {
         synchronized (mPackages) {
             WeakReference<LoadedApk> ref;
+            //系统有俩个变量保存包含代码和不包含代码的LoadedApk对象，，，key是包名，，，，，
             if ((flags&Context.CONTEXT_INCLUDE_CODE) != 0) {
                 ref = mPackages.get(packageName);
             } else {
@@ -1249,6 +1251,7 @@ public final class ActivityThread {
                     || packageInfo.mResources.getAssets().isUpToDate())) {
                 if (packageInfo.isSecurityViolation()
                         && (flags&Context.CONTEXT_IGNORE_SECURITY) == 0) {
+                        	//抛异常暂时不管，，，，，
                     throw new SecurityException(
                             "Requesting code from " + packageName
                             + " to be run in process "
@@ -1281,6 +1284,7 @@ public final class ActivityThread {
         if ((flags&(Context.CONTEXT_INCLUDE_CODE
                 |Context.CONTEXT_IGNORE_SECURITY))
                 == Context.CONTEXT_INCLUDE_CODE) {
+                	//满足有某个标记，同时没有某个标记，，
             if (securityViolation) {
                 String msg = "Requesting code from " + ai.packageName
                         + " (with uid " + ai.uid + ")";
@@ -1294,11 +1298,11 @@ public final class ActivityThread {
         }
         return getPackageInfo(ai, null, securityViolation, includeCode);
     }
-
+		//默认包含代码，，baseLoader为null
     public final LoadedApk getPackageInfoNoCheck(ApplicationInfo ai) {
         return getPackageInfo(ai, null, false, true);
     }
-
+		//获取包名对应的LoadedApk,
     private final LoadedApk getPackageInfo(ApplicationInfo aInfo,
             ClassLoader baseLoader, boolean securityViolation, boolean includeCode) {
         synchronized (mPackages) {
@@ -1896,7 +1900,9 @@ public final class ActivityThread {
                 // set up the agent's context
                 if (DEBUG_BACKUP) Slog.v(TAG, "Initializing BackupAgent "
                         + data.appInfo.backupAgentName);
-
+                        
+                        
+								//从这个地方也可以看到系统中的Context数量不是网上说的Activity+Application+Service数量的总和
                 ContextImpl context = new ContextImpl();
                 context.init(packageInfo, null, this);
                 context.setOuterContext(agent);
@@ -1968,7 +1974,7 @@ public final class ActivityThread {
 
         try {
             if (localLOGV) Slog.v(TAG, "Creating service " + data.info.name);
-
+						//构造Service的时候也构造了ContextImpl,,,
             ContextImpl context = new ContextImpl();
             context.init(packageInfo, null, this);
 
@@ -2215,7 +2221,7 @@ public final class ActivityThread {
                 	
                     a.mWindowAdded = true;
                     
-                    //添加窗口，，这会导致创建ViewRoot,间接调用WMS的函数，
+                    //添加窗口，，这会导致创建ViewRoot,间接调用WMS的函数，，，但是上面我们将它设置为不可见的。。。
                     wm.addView(decor, l);
                 }
 
@@ -3218,6 +3224,7 @@ public final class ActivityThread {
         }
 
         if (data.debugMode != IApplicationThread.DEBUG_OFF) {
+        	//调试模式，，，
             // XXX should have option to change the port.
             Debug.changeDebugPort(8100);
             if (data.debugMode == IApplicationThread.DEBUG_WAIT) {
@@ -3244,6 +3251,8 @@ public final class ActivityThread {
         }
 				//有指定的Instrumentation
         if (data.instrumentationName != null) {
+        	
+        		//对于Instrumentation而言，，，也是会构造ContextImpl的，，
             ContextImpl appContext = new ContextImpl();
             appContext.init(data.info, null, this);
             InstrumentationInfo ii = null;
@@ -3270,6 +3279,8 @@ public final class ActivityThread {
             instrApp.nativeLibraryDir = ii.nativeLibraryDir;
             LoadedApk pi = getPackageInfo(instrApp,
                     appContext.getClassLoader(), false, true);
+                    
+                    //对于Instrumentation而言，，，也是会构造ContextImpl的，，
             ContextImpl instrContext = new ContextImpl();
             instrContext.init(pi, null, this);
 

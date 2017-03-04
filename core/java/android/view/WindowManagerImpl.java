@@ -142,6 +142,7 @@ public class WindowManagerImpl implements WindowManager {
                 final int count = mViews != null ? mViews.length : 0;
                 for (int i=0; i<count; i++) {
                     if (mRoots[i].mWindow.asBinder() == wparams.token) {
+                    		//子窗口的token是父窗口的W对象对应的IBinder
                         panelParentView = mViews[i];
                     }
                 }

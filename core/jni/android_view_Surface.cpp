@@ -103,11 +103,13 @@ void doThrow(JNIEnv* env, const char* exc, const char* msg = NULL)
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-
+//java层SurfaceSession构造函数里面调用的，
 static void SurfaceSession_init(JNIEnv* env, jobject clazz)
 {
+		//参数clazz代表java层的SurfaceSession对象，
+		//强指针，
     sp<SurfaceComposerClient> client = new SurfaceComposerClient;
-    client->incStrong(clazz);
+    client->incStrong(clazz);//增加强引用计数，以防sp的生命周期过了之后SurfaceComposerClient被回收，
     env->SetIntField(clazz, sso.client, (int)client.get());
 }
 
@@ -116,8 +118,8 @@ static void SurfaceSession_destroy(JNIEnv* env, jobject clazz)
     SurfaceComposerClient* client =
             (SurfaceComposerClient*)env->GetIntField(clazz, sso.client);
     if (client != 0) {
-        client->decStrong(clazz);
-        env->SetIntField(clazz, sso.client, 0);
+        client->decStrong(clazz);//减少强引用计数后，SurfaceComposerClient就会被回收啦，，
+        env->SetIntField(clazz, sso.client, 0);//断开连接
     }
 }
 
@@ -140,18 +142,21 @@ static sp<SurfaceControl> getSurfaceControl(JNIEnv* env, jobject clazz)
         (SurfaceControl*)env->GetIntField(clazz, so.surfaceControl);
     return sp<SurfaceControl>(p);
 }
-
+//设置SurfaceControl到java层的Surface，
 static void setSurfaceControl(JNIEnv* env, jobject clazz, 
         const sp<SurfaceControl>& surface)
 {
+		//指针指向不变，
     SurfaceControl* const p = 
         (SurfaceControl*)env->GetIntField(clazz, so.surfaceControl);
     if (surface.get()) {
         surface->incStrong(clazz);
     }
     if (p) {
+    		//将之前的那个减少强引用计数，
         p->decStrong(clazz);
     }
+    //设置一个新的SurfaceControl到java层的Surface对象的mSurfaceControl字段，
     env->SetIntField(clazz, so.surfaceControl, (int)surface.get());
 }
 
@@ -198,7 +203,9 @@ static void setSurface(JNIEnv* env, jobject clazz, const sp<Surface>& surface)
 }
 
 // ----------------------------------------------------------------------------
-
+//初始化Surface，，，
+//参数session代表java层的SurfaceSession
+//参数clazz代表java层的Surface对象，
 static void Surface_init(
         JNIEnv* env, jobject clazz, 
         jobject session,
@@ -208,7 +215,7 @@ static void Surface_init(
         doThrow(env, "java/lang/NullPointerException");
         return;
     }
-    
+    //取出值，，WMS里面也只有一个，
     SurfaceComposerClient* client =
             (SurfaceComposerClient*)env->GetIntField(session, sso.client);
 
@@ -216,9 +223,12 @@ static void Surface_init(
     if (jname == NULL) {
         surface = client->createSurface(pid, dpy, w, h, format, flags);
     } else {
+    	//字符串转换，，
         const jchar* str = env->GetStringCritical(jname, 0);
         const String8 name(str, env->GetStringLength(jname));
         env->ReleaseStringCritical(jname, str);
+        
+        
         surface = client->createSurface(pid, name, dpy, w, h, format, flags);
     }
 
@@ -226,6 +236,7 @@ static void Surface_init(
         doThrow(env, OutOfResourcesException);
         return;
     }
+    //将surfaceControl保存到java层的Surface对象里面，
     setSurfaceControl(env, clazz, surface);
 }
 
@@ -641,7 +652,7 @@ static void Surface_writeToParcel(
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-
+//SurfaceSession代表和SurfaceFlinger的连接，，，一个进程只有一个，，
 const char* const kSurfaceSessionClassPathName = "android/view/SurfaceSession";
 const char* const kSurfaceClassPathName = "android/view/Surface";
 static void nativeClassInit(JNIEnv* env, jclass clazz);
@@ -687,6 +698,7 @@ static JNINativeMethod gSurfaceMethods[] = {
 
 void nativeClassInit(JNIEnv* env, jclass clazz)
 {
+	//用静态变量保存java层属性的信息，
     so.surface = env->GetFieldID(clazz, ANDROID_VIEW_SURFACE_JNI_ID, "I");
     so.surfaceControl = env->GetFieldID(clazz, "mSurfaceControl", "I");
     so.saveCount = env->GetFieldID(clazz, "mSaveCount", "I");
@@ -715,13 +727,14 @@ void nativeClassInit(JNIEnv* env, jclass clazz)
     po.x = env->GetFieldID(point, "x", "I");
     po.y = env->GetFieldID(point, "y", "I");
 }
-
+//这个函数在AndroidRuntime.cpp里面被调用
 int register_android_view_Surface(JNIEnv* env)
 {
     int err;
+    //关联SurfaceSession的jni
     err = AndroidRuntime::registerNativeMethods(env, kSurfaceSessionClassPathName,
             gSurfaceSessionMethods, NELEM(gSurfaceSessionMethods));
-
+		//关联Surface的jni,,,
     err |= AndroidRuntime::registerNativeMethods(env, kSurfaceClassPathName,
             gSurfaceMethods, NELEM(gSurfaceMethods));
     return err;

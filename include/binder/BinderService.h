@@ -46,7 +46,7 @@ public:
         ProcessState::self()->startThreadPool();
         IPCThreadState::self()->joinThreadPool();
     }
-
+		//将service发布到ServiceManager
     static void instantiate() { publish(); }
 
     static status_t shutdown() {

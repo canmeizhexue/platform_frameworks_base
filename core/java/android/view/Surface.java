@@ -140,13 +140,13 @@ public class Surface implements Parcelable {
     public static final int FLAGS_ORIENTATION_ANIMATION_DISABLE = 0x000000001;
 
     @SuppressWarnings("unused")
-    private int mSurfaceControl;
+    private int mSurfaceControl;//关联C层的SurfaceControl
     @SuppressWarnings("unused")
     private int mSaveCount;
     @SuppressWarnings("unused")
     private Canvas mCanvas;
     @SuppressWarnings("unused")
-    private int mNativeSurface;
+    private int mNativeSurface;//关联C层的Surface
     private String mName;
 
     // The display metrics used to provide the pseudo canvas size for applications
@@ -179,7 +179,7 @@ public class Surface implements Parcelable {
     static { nativeClassInit(); }
 
     
-    /**
+    /**主要用在WMS里面，
      * create a surface
      * {@hide}
      */
@@ -193,7 +193,7 @@ public class Surface implements Parcelable {
         init(s,pid,null,display,w,h,format,flags);
     }
 
-    /**
+    /**主要用在WMS里面，
      * create a surface with a name
      * {@hide}
      */
@@ -208,7 +208,7 @@ public class Surface implements Parcelable {
         mName = name;
     }
 
-    /**
+    /**主要是在应用程序测使用，
      * Create an empty surface, which will later be filled in by
      * readFromParcel().
      * {@hide}
@@ -217,6 +217,7 @@ public class Surface implements Parcelable {
         if (DEBUG_RELEASE) {
             mCreationStack = new Exception();
         }
+        //能够处理兼容模式的Canvas,,
         mCanvas = new CompatibleCanvas();
     }
 

@@ -17,7 +17,7 @@
 package android.view;
 
 
-/**
+/**连接到SurfaceFlinger,
  * An instance of this class represents a connection to the surface
  * flinger, in which you can create one or more Surface instances that will
  * be composited to the screen.
@@ -44,6 +44,6 @@ public class SurfaceSession {
     private native void init();
     private native void destroy();
     
-    private int mClient;
+    private int mClient;//关联C层的SurfaceComposerClient
 }
 

@@ -87,46 +87,60 @@ public:
         eOrientationAnimationDisable = 0x00000001
     };
 
-    /* create connection with surface flinger, requires
+    /*Android应用程序通过它来请求SurfaceFlinger服务建立一个连接
+     create connection with surface flinger, requires
      * ACCESS_SURFACE_FLINGER permission
      */
     virtual sp<ISurfaceComposerClient> createConnection() = 0;
 
-    /* create a client connection with surface flinger
+    /*Android应用程序通过它来请求SurfaceFlinger服务创建一块共享UI元数据缓冲区，
+     create a client connection with surface flinger
      */
     virtual sp<ISurfaceComposerClient> createClientConnection() = 0;
 
-    /* retrieve the control block */
+    /* Android应用程序通过它来请求SurfaceFlinger服务返回一块匿名共享内存，返回的匿名共享内存包含了设备显示屏的信息，例如，宽度和高度信息。retrieve the control block */
     virtual sp<IMemoryHeap> getCblk() const = 0;
 
     /* open/close transactions. requires ACCESS_SURFACE_FLINGER permission */
+    //Android应用程序通过它请求SurfaceFlinger服务来增加一个全局Transaction计数，用来批量修改UI属性信息。
+    //注意，这些被修改的UI属性信息会被缓存起来，不会马上生效。要使得这些被修改的UI属性信息生效，需要调用另外一个成员函数closeGlobalTransaction
     virtual void openGlobalTransaction() = 0;
+    
+    //Android应用程序通过它请求SurfaceFlinger服务来减少一个全局Transaction计数。
+    //当这个全局Transaction计数减少至0的时候，前面通过openGlobalTransaction来请求修改的UI属性信息就会马上生效。
     virtual void closeGlobalTransaction() = 0;
 
     /* [un]freeze display. requires ACCESS_SURFACE_FLINGER permission */
+    //Android应用程序通过它来请求SurfaceFlinger服务来冻结屏幕。屏幕在被冻结期间，所有UI渲染操作都会被缓存起来，等待被执行。
     virtual status_t freezeDisplay(DisplayID dpy, uint32_t flags) = 0;
+    //屏幕被解冻之后，SurfaceFlinger服务就可以执行UI渲染操作了。
     virtual status_t unfreezeDisplay(DisplayID dpy, uint32_t flags) = 0;
 
     /* Set display orientation. requires ACCESS_SURFACE_FLINGER permission */
+    //Android应用程序通过它来请求SurfaceFlinger服务设备屏幕的旋转方向
     virtual int setOrientation(DisplayID dpy, int orientation, uint32_t flags) = 0;
 
-    /* signal that we're done booting.
+    /* WindowManagerService通过它来告诉SurfaceFlinger服务，系统启动完成了，这时候SurfaceFlinger服务就会停止执行开机动画
+    signal that we're done booting.
      * Requires ACCESS_SURFACE_FLINGER permission
      */
     virtual void bootFinished() = 0;
 
-    /* Capture the specified screen. requires READ_FRAME_BUFFER permission
+    /*Android应用程序通过它来请求SurfaceFlinger服务截取屏幕图像
+     Capture the specified screen. requires READ_FRAME_BUFFER permission
      * This function will fail if there is a secure window on screen.
      */
     virtual status_t captureScreen(DisplayID dpy,
             sp<IMemoryHeap>* heap,
             uint32_t* width, uint32_t* height, PixelFormat* format,
             uint32_t reqWidth, uint32_t reqHeight) = 0;
-
+		//Android应用程序通过它来请求SurfaceFlinger服务关闭屏幕
     virtual status_t turnElectronBeamOff(int32_t mode) = 0;
+    //Android应用程序通过它来请求SurfaceFlinger服务点亮屏幕
     virtual status_t turnElectronBeamOn(int32_t mode) = 0;
 
-    /* Signal surfaceflinger that there might be some work to do
+    /* Android应用程序通过它来请求SurfaceFlinger服务渲染UI
+    Signal surfaceflinger that there might be some work to do
      * This is an ASYNCHRONOUS call.
      */
     virtual void signal() const = 0;

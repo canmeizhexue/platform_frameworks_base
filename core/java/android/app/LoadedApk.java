@@ -59,7 +59,7 @@ final class ServiceConnectionLeaked extends AndroidRuntimeException {
     }
 }
 
-/**
+/**本地维护的一个apk
  * Local state maintained about a currently loaded .apk.
  * @hide
  */
@@ -96,14 +96,17 @@ final class LoadedApk {
     Application getApplication() {
         return mApplication;
     }
-
+		//对于一般的应用程序使用的是这个构造函数，
     public LoadedApk(ActivityThread activityThread, ApplicationInfo aInfo,
             ActivityThread mainThread, ClassLoader baseLoader,
             boolean securityViolation, boolean includeCode) {
         mActivityThread = activityThread;
         mApplicationInfo = aInfo;
         mPackageName = aInfo.packageName;
+        
+        //
         mAppDir = aInfo.sourceDir;
+        //因为有可能一个应用程序，开多个进程了，，，
         mResDir = aInfo.uid == Process.myUid() ? aInfo.sourceDir
                 : aInfo.publicSourceDir;
         mSharedLibraries = aInfo.sharedLibraryFiles;
@@ -116,6 +119,7 @@ final class LoadedApk {
         mCompatibilityInfo = new CompatibilityInfo(aInfo);
 
         if (mAppDir == null) {
+        	//一般不满足，，，
             if (ActivityThread.mSystemContext == null) {
                 ActivityThread.mSystemContext =
                     ContextImpl.createSystemContext(mainThread);
@@ -130,7 +134,7 @@ final class LoadedApk {
             mResources = ActivityThread.mSystemContext.getResources();
         }
     }
-
+		//这个构造函数只有在系统SystemServer进程构造ContextImpl的时候才会调用
     public LoadedApk(ActivityThread activityThread, String name,
             Context systemContext, ApplicationInfo info) {
         mActivityThread = activityThread;
@@ -435,12 +439,13 @@ final class LoadedApk {
     }
 
     public Resources getResources(ActivityThread mainThread) {
+    		//要是没有就重新建立，，，
         if (mResources == null) {
             mResources = mainThread.getTopLevelResources(mResDir, this);
         }
         return mResources;
     }
-
+		//获取Application对象，，
     public Application makeApplication(boolean forceDefaultAppClass,
             Instrumentation instrumentation) {
         if (mApplication != null) {
@@ -456,6 +461,7 @@ final class LoadedApk {
 
         try {
             java.lang.ClassLoader cl = getClassLoader();
+            //构造Application对象的时候构造了ContextImpl,,
             ContextImpl appContext = new ContextImpl();
             appContext.init(this, null, mActivityThread);
             app = mActivityThread.mInstrumentation.newApplication(

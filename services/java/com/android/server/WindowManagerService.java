@@ -275,7 +275,7 @@ public class WindowManagerService extends IWindowManager.Stub
      */
     final HashSet<Session> mSessions = new HashSet<Session>();
 
-    /**
+    /**客户端的W对象到WindowState对象的映射，每一个窗口都有一个WindowState对象
      * Mapping from an IWindow IBinder to the server's Window object.
      * This is also used as the lock for all of our state.
      */
@@ -1776,19 +1776,28 @@ public class WindowManagerService extends IWindowManager.Stub
             }
         }
     }
+    //添加窗口，对应的是ViewRoot里面的setView方法
     
+    //大致流程是：
+    //1.前置处理，判断参数的合法性
+    //2.具体添加和窗口相关的数据
+    //3.后置处理，添加窗口会引起相关状态的变化
+    //参数client代表窗口的W对象，
+    //参数attrs代表要添加的窗口的属性，
+    //参数outInputChannel用来给应用程序传递触摸屏消息的
     public int addWindow(Session session, IWindow client,
             WindowManager.LayoutParams attrs, int viewVisibility,
             Rect outContentInsets, InputChannel outInputChannel) {
+            	////根据窗口类型检查添加窗口的权限
         int res = mPolicy.checkAddPermission(attrs);
         if (res != WindowManagerImpl.ADD_OKAY) {
             return res;
         }
 
         boolean reportNewConfig = false;
-        WindowState attachedWindow = null;
+        WindowState attachedWindow = null;//父窗口，，
         WindowState win = null;
-
+				//mWindowMap保存的是W到WindowState的映射
         synchronized(mWindowMap) {
             // Instantiating a Display requires talking with the simulator,
             // so don't do it until we know the system is mostly up and
@@ -1803,17 +1812,22 @@ public class WindowManagerService extends IWindowManager.Stub
             }
 
             if (mWindowMap.containsKey(client.asBinder())) {
+            	//说明之前已经添加，
+            		//对于Activity窗口和这个Activity的子窗口，会有俩个不同的ViewRoot和W对象。
                 Slog.w(TAG, "Window " + client + " is already added");
                 return WindowManagerImpl.ADD_DUPLICATE_ADD;
             }
 
             if (attrs.type >= FIRST_SUB_WINDOW && attrs.type <= LAST_SUB_WINDOW) {
+            	//如果现在想添加的窗口是子窗口，找到它的父窗口，子窗口的attrs.token保存的是父窗口的W对象
                 attachedWindow = windowForClientLocked(null, attrs.token, false);
+                //想添加子窗口，但是找不到父窗口
                 if (attachedWindow == null) {
                     Slog.w(TAG, "Attempted to add window with token that is not a window: "
                           + attrs.token + ".  Aborting.");
                     return WindowManagerImpl.ADD_BAD_SUBWINDOW_TOKEN;
                 }
+                //这个窗口的父窗口不能是别人的子窗口，也就是说窗口没有三代关系，子窗口不能再有子窗口。
                 if (attachedWindow.mAttrs.type >= FIRST_SUB_WINDOW
                         && attachedWindow.mAttrs.type <= LAST_SUB_WINDOW) {
                     Slog.w(TAG, "Attempted to add window with token that is a sub-window: "
@@ -1823,8 +1837,17 @@ public class WindowManagerService extends IWindowManager.Stub
             }
 
             boolean addToken = false;
+            //窗口分三类，Application级（attrs.token对应ActivityRecord），子窗口级（attrs.token对应Activity的W），系统窗口级（attrs.token对应Activity的W），
+            
+            //mTokenMap的键有可能对应W，也有可能对应ActivityRecord，，可能多个窗口对应同一个ActivityRecord,保存在attrs.token中
+            //假如是ActivityRecord，那么之前的addAppToken函数(被AMS调用)已经创建了一个AppWindowToken保存再mTokenMap
+            //对于同一个Activity下的多个Application类窗口，他们的attrs.token都对应同一个ActivityRecord，共用同一个AppWindowToken,但是会有自己的WindowState对象
+            //对于同一个Activity下的多个非Application类别窗口，第一个会创建一个WindowToken，其他的会共用这个WindowToken,每个都会创建一个WindowState对象
+            //也就是说对于一个Activity而言，在WMS里面一般有一个AppWindowToken和一个WindowToken
+            //同一个Activity下的WindowState构成图
             WindowToken token = mTokenMap.get(attrs.token);
             if (token == null) {
+            	//对于同一个Activity下的第一个非Application类窗口，attrs.token保存的是W，会为它创建一个WindowToken
                 if (attrs.type >= FIRST_APPLICATION_WINDOW
                         && attrs.type <= LAST_APPLICATION_WINDOW) {
                     Slog.w(TAG, "Attempted to add application window with unknown token "
@@ -1841,10 +1864,12 @@ public class WindowManagerService extends IWindowManager.Stub
                           + attrs.token + ".  Aborting.");
                     return WindowManagerImpl.ADD_BAD_APP_TOKEN;
                 }
+                //对于非Application类别的窗口，attrs.token保存的是保存的是Activity窗口的W对象
                 token = new WindowToken(attrs.token, -1, false);
                 addToken = true;
             } else if (attrs.type >= FIRST_APPLICATION_WINDOW
                     && attrs.type <= LAST_APPLICATION_WINDOW) {
+                    	 //添加应用程序窗口，appWindowToken不能为空
                 AppWindowToken atoken = token.appWindowToken;
                 if (atoken == null) {
                     Slog.w(TAG, "Attempted to add window with non-application token "
@@ -1862,19 +1887,22 @@ public class WindowManagerService extends IWindowManager.Stub
                     return WindowManagerImpl.ADD_STARTING_NOT_NEEDED;
                 }
             } else if (attrs.type == TYPE_INPUT_METHOD) {
+            	//要添加输入法窗口，在此之前IMMS服务中要求WMS创建一个WindowToken,应用程序是没有权限输入法窗口的
                 if (token.windowType != TYPE_INPUT_METHOD) {
                     Slog.w(TAG, "Attempted to add input method window with bad token "
                             + attrs.token + ".  Aborting.");
                       return WindowManagerImpl.ADD_BAD_APP_TOKEN;
                 }
             } else if (attrs.type == TYPE_WALLPAPER) {
+            	//要添加的是墙纸窗口，在此之前WallpaperManagerService要求WMS创建一个WindowToken，应用程序是没有权限创建墙纸窗口的
                 if (token.windowType != TYPE_WALLPAPER) {
                     Slog.w(TAG, "Attempted to add wallpaper window with bad token "
                             + attrs.token + ".  Aborting.");
                       return WindowManagerImpl.ADD_BAD_APP_TOKEN;
                 }
             }
-
+						 //对于Activity窗口，token是AppWindowToken
+						//对于Application级窗口，token也是AppWindowToken
             win = new WindowState(session, client, token,
                     attachedWindow, attrs, viewVisibility);
             if (win.mDeathRecipient == null) {
@@ -1884,15 +1912,16 @@ public class WindowManagerService extends IWindowManager.Stub
                         + " that is dead, aborting.");
                 return WindowManagerImpl.ADD_APP_EXITING;
             }
-
+						//根据窗口类型调节参数，比如给Toast窗口加上不能获取焦点和不能获取触摸屏事件的标志，
             mPolicy.adjustWindowParamsLw(win.mAttrs);
-
+						//根据窗口类型，限制某些窗口类型是单例的，目前包括状态栏窗口，键盘锁窗口，，一般情况用不到
             res = mPolicy.prepareAddWindowLw(win, attrs);
             if (res != WindowManagerImpl.ADD_OKAY) {
                 return res;
             }
             
             if (outInputChannel != null) {
+            	//创建一对管道，一个传递给InputDispatcher，一个给InputManager,一个返回给应用程序，，
                 String name = win.makeInputChannelName();
                 InputChannel[] inputChannels = InputChannel.openInputChannelPair(name);
                 win.mInputChannel = inputChannels[0];
@@ -1911,21 +1940,28 @@ public class WindowManagerService extends IWindowManager.Stub
                 mTokenMap.put(attrs.token, token);
                 mTokenList.add(token);
             }
+            
+            
+            //调用WindowState的attach,,,,
             win.attach();
             mWindowMap.put(client.asBinder(), win);
 
             if (attrs.type == TYPE_APPLICATION_STARTING &&
                     token.appWindowToken != null) {
+                    	//为Activity创建启动窗口
                 token.appWindowToken.startingWindow = win;
             }
 
             boolean imMayMove = true;
 
             if (attrs.type == TYPE_INPUT_METHOD) {
+            	//输入法窗口整个系统只有一个
                 mInputMethodWindow = win;
+                //添加输入法窗口
                 addInputMethodWindowToListLocked(win);
                 imMayMove = false;
             } else if (attrs.type == TYPE_INPUT_METHOD_DIALOG) {
+            	//输入法对话框窗口会有多个，
                 mInputMethodDialogs.add(win);
                 addWindowToListInOrderLocked(win, true);
                 adjustInputMethodDialogsLocked();
@@ -1933,15 +1969,17 @@ public class WindowManagerService extends IWindowManager.Stub
             } else {
                 addWindowToListInOrderLocked(win, true);
                 if (attrs.type == TYPE_WALLPAPER) {
+                	//添加墙纸窗口，
                     mLastWallpaperTimeoutTime = 0;
                     adjustWallpaperWindowsLocked();
                 } else if ((attrs.flags&FLAG_SHOW_WALLPAPER) != 0) {
+                	//添加的是需要显示墙纸的窗口
                     adjustWallpaperWindowsLocked();
                 }
             }
-
+						 //因为新添加的窗口会引起窗口进入动画
             win.mEnterAnimationPending = true;
-
+					//主要是为新建窗口计算大小
             mPolicy.getContentInsetHintLw(attrs, outContentInsets);
 
             if (mInTouchMode) {
@@ -1950,9 +1988,10 @@ public class WindowManagerService extends IWindowManager.Stub
             if (win == null || win.mAppToken == null || !win.mAppToken.clientHidden) {
                 res |= WindowManagerImpl.ADD_FLAG_APP_VISIBLE;
             }
-
+						//进行添加窗口逻辑的后续处理，
             boolean focusChanged = false;
             if (win.canReceiveKeys()) {
+            	//如果新添加的窗口能接收键盘事件，那么焦点窗口可能已经改变了
                 focusChanged = updateFocusedWindowLocked(UPDATE_FOCUS_WILL_ASSIGN_LAYERS);
                 if (focusChanged) {
                     imMayMove = false;
@@ -1960,9 +1999,10 @@ public class WindowManagerService extends IWindowManager.Stub
             }
 
             if (imMayMove) {
+            	//输入法窗口可能要改变了，需要调整一下
                 moveInputMethodWindowsIfNeededLocked(false);
             }
-
+						//为新建的窗口分配层值，
             assignLayersLocked();
             // Don't do layout here, the window must call
             // relayout to be displayed, so we'll do it there.
@@ -1988,6 +2028,7 @@ public class WindowManagerService extends IWindowManager.Stub
         // block.
         final long origId = Binder.clearCallingIdentity();
         if (reportNewConfig) {
+        	//这个函数需要特权才能调用，所以需要先去掉客户端的身份，调用完了之后，再恢复客户端身份，这种机制在很多地方都会看到。
             sendNewConfiguration();
         }
         Binder.restoreCallingIdentity(origId);
@@ -2277,7 +2318,9 @@ public class WindowManagerService extends IWindowManager.Stub
 
         return null;
     }
-
+		//窗口布局，，，这个里面会创建窗口的Surface，，，
+		//重新设置由参数client所描述的一个应用程序窗口的大小和可见性等信息，
+		//而当一个应用程序窗口的大小或者可见性发生变化之后，系统中当前获得焦点的窗口，以及输入法窗口和壁纸窗口等都可能会发生变化，而且也会对其它窗口产生影响，
     public int relayoutWindow(Session session, IWindow client,
             WindowManager.LayoutParams attrs, int requestedWidth,
             int requestedHeight, int viewVisibility, boolean insetsPending,
@@ -2289,6 +2332,7 @@ public class WindowManagerService extends IWindowManager.Stub
         long origId = Binder.clearCallingIdentity();
 
         synchronized(mWindowMap) {
+        	//client在应用程序代表窗口，，WindowState在WMS代表对应的窗口，，，
             WindowState win = windowForClientLocked(session, client, false);
             if (win == null) {
                 return 0;
@@ -2340,9 +2384,11 @@ public class WindowManagerService extends IWindowManager.Stub
 
             win.mRelayoutCalled = true;
             final int oldVisibility = win.mViewVisibility;
+            
             win.mViewVisibility = viewVisibility;
             if (viewVisibility == View.VISIBLE &&
                     (win.mAppToken == null || !win.mAppToken.clientHidden)) {
+                    //如果win.mAppToken不为null的话，那么它代表的是Activity的窗口，，
                 displayed = !win.isVisibleLw();
                 if (win.mExiting) {
                     win.mExiting = false;
@@ -2386,8 +2432,10 @@ public class WindowManagerService extends IWindowManager.Stub
                     displayed = true;
                 }
                 try {
+                	//这个地方创建Surface，，，，也就是说Surface是在relayout窗口操作中创建的，
                     Surface surface = win.createSurfaceLocked();
                     if (surface != null) {
+                    	//复制到outSurface,,,
                         outSurface.copyFrom(surface);
                         win.mReportDestroySurface = false;
                         win.mSurfacePendingDestroy = false;
@@ -2495,7 +2543,7 @@ public class WindowManagerService extends IWindowManager.Stub
             // updateFocusedWindowLocked() already assigned layers so we only need to
             // reassign them at this point if the IM window state gets shuffled
             boolean assignLayers = false;
-
+						//影响了输入法窗口
             if (imMayMove) {
                 if (moveInputMethodWindowsIfNeededLocked(false) || displayed) {
                     // Little hack here -- we -should- be able to rely on the
@@ -2506,6 +2554,7 @@ public class WindowManagerService extends IWindowManager.Stub
                     assignLayers = true;
                 }
             }
+            //影响了墙纸窗口
             if (wallpaperMayMove) {
                 if ((adjustWallpaperWindowsLocked()&ADJUST_WALLPAPER_LAYERS_CHANGED) != 0) {
                     assignLayers = true;
@@ -2526,6 +2575,7 @@ public class WindowManagerService extends IWindowManager.Stub
             if (win.mAppToken != null) {
                 win.mAppToken.updateReportedVisibilityLocked();
             }
+            //设置输出参数，，，
             outFrame.set(win.mFrame);
             outContentInsets.set(win.mContentInsets);
             outVisibleInsets.set(win.mVisibleInsets);
@@ -5567,13 +5617,18 @@ public class WindowManagerService extends IWindowManager.Stub
     // -------------------------------------------------------------
     // Client Session State
     // -------------------------------------------------------------
-		//每个进程只有一个Session对象，
+		//每个进程只有一个Session对象，被ViewRoot中的相关方法调用
     private final class Session extends IWindowSession.Stub
             implements IBinder.DeathRecipient {
+            	//应用程序传进来的，打开Session的时候，，
         final IInputMethodClient mClient;
         final IInputContext mInputContext;
+        
+        //应用程序信息，，
         final int mUid;
         final int mPid;
+        
+        
         final String mStringName;
         SurfaceSession mSurfaceSession;
         int mNumWindow = 0;
@@ -5594,6 +5649,7 @@ public class WindowManagerService extends IWindowManager.Stub
 
             synchronized (mWindowMap) {
                 if (mInputMethodManager == null && mHaveInputMethods) {
+                	//第一次才会执行，，mInputMethodManager是WMS的成员变量
                     IBinder b = ServiceManager.getService(
                             Context.INPUT_METHOD_SERVICE);
                     mInputMethodManager = IInputMethodManager.Stub.asInterface(b);
@@ -5601,6 +5657,7 @@ public class WindowManagerService extends IWindowManager.Stub
             }
             long ident = Binder.clearCallingIdentity();
             try {
+            		//将应用程序传进来的注册到输入法管理器，，
                 // Note: it is safe to call in to the input method manager
                 // here because we are not holding our lock.
                 if (mInputMethodManager != null) {
@@ -5667,7 +5724,7 @@ public class WindowManagerService extends IWindowManager.Stub
         public void remove(IWindow window) {
             removeWindow(this, window);
         }
-
+				//重新布局窗口，，，
         public int relayout(IWindow window, WindowManager.LayoutParams attrs,
                 int requestedWidth, int requestedHeight, int viewFlags,
                 boolean insetsPending, Rect outFrame, Rect outContentInsets,
@@ -5763,6 +5820,7 @@ public class WindowManagerService extends IWindowManager.Stub
 
         void windowAddedLocked() {
             if (mSurfaceSession == null) {
+            	//一个进程也只有一个SurfaceSession,,
                 if (localLOGV) Slog.v(
                     TAG, "First window added to " + this + ", creating SurfaceSession");
                 mSurfaceSession = new SurfaceSession();
@@ -5770,6 +5828,7 @@ public class WindowManagerService extends IWindowManager.Stub
                         TAG, "  NEW SURFACE SESSION " + mSurfaceSession);
                 mSessions.add(this);
             }
+            //这个进程窗口的个数，，，，
             mNumWindow++;
         }
 
@@ -5814,17 +5873,30 @@ public class WindowManagerService extends IWindowManager.Stub
     // -------------------------------------------------------------
     // Client Window State
     // -------------------------------------------------------------
-
+	//每一个窗口都有一个WindowState,每一个窗口的所有子窗口都对应同一个WindowToken对象
     private final class WindowState implements WindowManagerPolicy.WindowState {
         final Session mSession;
-        final IWindow mClient;
+        final IWindow mClient;//对应应用程序端的W对象，用来通知应用程序，
+        
+                //对于Activity(更宽泛点讲是Application类型)窗口，这个字段保存的是AppWindowToken
+        
+        //对于同一个Application类的非Application窗口，用的是同一个WindowToken
         WindowToken mToken;
+               //对于Activity(更宽泛点讲是Application类型)窗口，这个字段保存的是AppWindowToken
+        
+        //对于同一个Application类的非Application窗口，mRootToken代表的是祖先窗口的WindowToken（其实也是AppWindowToken）
         WindowToken mRootToken;
+                //对于Activity(更宽泛点讲是Application类型)窗口，这个字段保存的是AppWindowToken
+        
+        //对于同一个Application类的非Application窗口，mAppToken代表的是祖先窗口的WindowToken
         AppWindowToken mAppToken;
         AppWindowToken mTargetAppToken;
         final WindowManager.LayoutParams mAttrs = new WindowManager.LayoutParams();
         final DeathRecipient mDeathRecipient;
+        
+        //保存父子关系，这个窗口的父窗口，
         final WindowState mAttachedWindow;
+        //这个窗口的子窗口，，
         final ArrayList<WindowState> mChildWindows = new ArrayList<WindowState>();
         final int mBaseLayer;
         final int mSubLayer;
@@ -5836,8 +5908,12 @@ public class WindowManagerService extends IWindowManager.Stub
         boolean mPolicyVisibility = true;
         boolean mPolicyVisibilityAfterAnim = true;
         boolean mAppFreezing;
+        //应用程序侧的Surface负责填充Ui数据（绘制操作只需要考虑自己就行了），WMS侧的Surface负责设置窗口的大小位置等信息（这些需要从全局的角度考虑不同的窗口叠加），
         Surface mSurface;
+        //当一个应用程序窗口的绘图表面被销毁时，WindowManagerService服务就会将相应的WindowState对象的成员变量mReportDestroySurface的值设置为true，
+        //表示要向该应用程序窗口所运行在应用程序进程发送一个绘图表面销毁通知
         boolean mReportDestroySurface;
+        //当一个应用程序窗口的绘图表面正在等待销毁时，WindowManagerService服务就会将相应的WindowState对象的成员变量mReportDestroySurface的值设置为true。
         boolean mSurfacePendingDestroy;
         boolean mAttachedHidden;    // is our parent window hidden?
         boolean mLastHidden;        // was this window last hidden?
@@ -5857,7 +5933,7 @@ public class WindowManagerService extends IWindowManager.Stub
         
         Configuration mConfiguration = null;
         
-        // Actual frame shown on-screen (may be modified by animation)
+        // Actual frame shown on-screen (may be modified by animation)，该窗口最终在屏幕上的矩形区域，如果没有动画的话，那么和mFrame一样。
         final Rect mShownFrame = new Rect();
         final Rect mLastShownFrame = new Rect();
 
@@ -5874,7 +5950,7 @@ public class WindowManagerService extends IWindowManager.Stub
         final Rect mLastVisibleInsets = new Rect();
         boolean mVisibleInsetsChanged;
 
-        /**
+        /**边框空白区域
          * Insets that are covered by system windows
          */
         final Rect mContentInsets = new Rect();
@@ -5914,12 +5990,15 @@ public class WindowManagerService extends IWindowManager.Stub
         float mLastHScale=1, mLastVScale=1;
         final Matrix mTmpMatrix = new Matrix();
 
-        // "Real" frame that the application sees.
+        // "Real" frame that the application sees.，，该窗口在程序上来看在屏幕上应该占据的区域
         final Rect mFrame = new Rect();
         final Rect mLastFrame = new Rect();
 
+				//父窗口的大小，如果没有父窗口，那么一般是屏幕的大小
         final Rect mContainingFrame = new Rect();
         final Rect mDisplayFrame = new Rect();
+        
+        //窗口内容的尺寸
         final Rect mContentFrame = new Rect();
         final Rect mVisibleFrame = new Rect();
 
@@ -5962,17 +6041,24 @@ public class WindowManagerService extends IWindowManager.Stub
 
         // This is set after the Surface has been created but before the
         // window has been drawn.  During this time the surface is hidden.
+        //当一个应用程序窗口的绘图表面处于创建之后并且绘制之前时，
+        //WindowManagerService服务就会将相应的WindowState对象的成员变量mDrawPending的值设置为true，以表示该应用程序窗口的绘图表面正在等待绘制。
         boolean mDrawPending;
 
         // This is set after the window has finished drawing for the first
         // time but before its surface is shown.  The surface will be
         // displayed when the next layout is run.
+        //当一个应用程序窗口的绘图表面绘制完成之后并且可以显示出来之前时，
+        //WindowManagerService服务就会将相应的WindowState对象的成员变量mCommitDrawPending的值设置为true，以表示该应用程序窗口正在等待显示。
         boolean mCommitDrawPending;
 
         // This is set during the time after the window's drawing has been
         // committed, and before its surface is actually shown.  It is used
         // to delay showing the surface until all windows in a token are ready
         // to be shown.
+        //有时候当一个应用程序窗口的绘图表面绘制完成并且可以显示出来之后，由于与该应用程序窗口所关联的一个Activity组件的其它窗口还未准备好显示出来，
+        //这时候WindowManagerService服务就会将相应的WindowState对象的成员变量mReadyToShow的值设置为true，
+        //以表示该应用程序窗口需要延迟显示出来，即需要等到与该应用程序窗口所关联的一个Activity组件的其它窗口也可以显示出来之后再显示。
         boolean mReadyToShow;
 
         // Set when the window has been shown in the screen the first time.
@@ -6008,6 +6094,11 @@ public class WindowManagerService extends IWindowManager.Stub
         CharSequence mLastTitle;
         boolean mWasPaused;
 
+				//参数s每个程序只有一个，
+				//参数c，每个窗口对象都有一个W对象，
+				//对于Activity(更宽泛点讲是Application类型，也就是顶级类型)窗口，token保存的是AppWindowToken。对于同一个Application类的非Application类窗口,token都是同一个
+				//attachedWindow代表父窗口，
+				//a代表当前窗口的属性信息
         WindowState(Session s, IWindow c, WindowToken token,
                WindowState attachedWindow, WindowManager.LayoutParams a,
                int viewVisibility) {
@@ -6038,11 +6129,13 @@ public class WindowManagerService extends IWindowManager.Stub
 
             if ((mAttrs.type >= FIRST_SUB_WINDOW &&
                     mAttrs.type <= LAST_SUB_WINDOW)) {
+                    	//当前WindowState代表的是子窗口
                 // The multiplier here is to reserve space for multiple
                 // windows in the same type layer.
                 mBaseLayer = mPolicy.windowTypeToLayerLw(
                         attachedWindow.mAttrs.type) * TYPE_LAYER_MULTIPLIER
                         + TYPE_LAYER_OFFSET;
+                        //子窗口的基本层值和父窗口的基本层值是一样的，同一个类型的窗口，基本层值也是一样的（默认情况下）
                 mSubLayer = mPolicy.subWindowTypeToLayerLw(a.type);
                 mAttachedWindow = attachedWindow;
                 mAttachedWindow.mChildWindows.add(this);
@@ -6053,12 +6146,15 @@ public class WindowManagerService extends IWindowManager.Stub
                 mIsWallpaper = attachedWindow.mAttrs.type == TYPE_WALLPAPER;
                 mIsFloatingLayer = mIsImWindow || mIsWallpaper;
             } else {
+            	//当前WindowState代表的不是子窗口
                 // The multiplier here is to reserve space for multiple
                 // windows in the same type layer.
                 mBaseLayer = mPolicy.windowTypeToLayerLw(a.type)
                         * TYPE_LAYER_MULTIPLIER
                         + TYPE_LAYER_OFFSET;
+                        //父窗口的子层值默认是0
                 mSubLayer = 0;
+                //当前不是子窗口，那么将父窗口字段清空
                 mAttachedWindow = null;
                 mLayoutAttached = false;
                 mIsImWindow = mAttrs.type == TYPE_INPUT_METHOD
@@ -6073,6 +6169,7 @@ public class WindowManagerService extends IWindowManager.Stub
             }
             WindowToken appToken = appWin.mToken;
             while (appToken.appWindowToken == null) {
+            	//说明这个不是Application类的WindowToken，那么appToken.token对应的是W对象
                 WindowToken parent = mTokenMap.get(appToken.token);
                 if (parent == null || appToken == parent) {
                     break;
@@ -6081,7 +6178,9 @@ public class WindowManagerService extends IWindowManager.Stub
             }
             mRootToken = appToken;
             mAppToken = appToken.appWindowToken;
-
+						
+						
+						//构造函数中清空变量值，比如Surface，
             mSurface = null;
             mRequestedWidth = 0;
             mRequestedHeight = 0;
@@ -6093,7 +6192,7 @@ public class WindowManagerService extends IWindowManager.Stub
             mAnimLayer = 0;
             mLastLayer = 0;
         }
-
+				//在addWindow里面调用的，，
         void attach() {
             if (localLOGV) Slog.v(
                 TAG, "Attaching " + this + " token=" + mToken
@@ -6265,6 +6364,7 @@ public class WindowManagerService extends IWindowManager.Stub
         }
 
         Surface createSurfaceLocked() {
+        		//对于一个窗口，并不是创建完了就会一直存在，由于系统内存紧张，会回收一些窗口的内存资源的，所以这个地方会判断，
             if (mSurface == null) {
                 mReportDestroySurface = false;
                 mSurfacePendingDestroy = false;
@@ -6277,10 +6377,12 @@ public class WindowManagerService extends IWindowManager.Stub
 
                 int flags = 0;
                 if (mAttrs.memoryType == MEMORY_TYPE_PUSH_BUFFERS) {
+                	//说明正在处理的应用程序窗口不拥有专属的图形缓冲区
                     flags |= Surface.PUSH_BUFFERS;
                 }
 
                 if ((mAttrs.flags&WindowManager.LayoutParams.FLAG_SECURE) != 0) {
+                	//安全性比较高，不允许截图，，，SurfaceFlinger服务在执行截屏功能时，就不能把它的界面截取下来。
                     flags |= Surface.SECURE;
                 }
                 if (DEBUG_VISIBILITY) Slog.v(
@@ -6289,7 +6391,7 @@ public class WindowManagerService extends IWindowManager.Stub
                     + " w=" + mFrame.width()
                     + " h=" + mFrame.height() + " format="
                     + mAttrs.format + " flags=" + flags);
-
+								//mFrame,它用来描述应用程序窗口的位置和大小，它们是由WindowManagerService服务根据屏幕大小以及其它属性计算出来的
                 int w = mFrame.width();
                 int h = mFrame.height();
                 if ((mAttrs.flags & LayoutParams.FLAG_SCALED) != 0) {
@@ -6312,6 +6414,22 @@ public class WindowManagerService extends IWindowManager.Stub
                 mSurfaceW = w;
                 mSurfaceH = h;
                 try {
+                	//上面都是为创建这个Surface做准备，，，，
+                	   //在创建一个应用程序窗口的绘图表面之前，我们需要知道以下数据：
+
+        					//1. 应用程序窗口它所运行的应用程序进程的PID。
+
+       						 //2. 与应用程序窗口它所运行的应用程序进程所关联的一个SurfaceSession对象。
+
+       						 //3. 应用程序窗口的标题。
+
+        					//4. 应用程序窗口的像素格式。
+
+       						// 5. 应用程序窗口的宽度。
+
+       						// 6. 应用程序窗口的高度。
+
+        					//7. 应用程序窗口的图形缓冲区属性标志。
                     mSurface = new Surface(
                             mSession.mSurfaceSession, mSession.mPid,
                             mAttrs.getTitle().toString(),
@@ -6344,17 +6462,25 @@ public class WindowManagerService extends IWindowManager.Stub
                             mAnimLayer + " HIDE", null);
                 }
                 Surface.openTransaction();
+                //注意，为了避免SurfaceFlinger服务每设置一个应用程序窗口属性就重新渲染一次系统的UI，属性设置需要在一个事务中进行，
+                //这样就可以避免出现界面闪烁。我们通过调用Surface类的静态成员函数openTransaction和closeTransaction就可以分别在SurfaceFlinger服务中打开和关闭一个事务。
                 try {
                     try {
+                    	//x轴和y轴位置，，
                         mSurfaceX = mFrame.left + mXOffset;
                         mSurfaceY = mFrame.top + mYOffset;
+                        
                         mSurface.setPosition(mSurfaceX, mSurfaceY);
                         mSurfaceLayer = mAnimLayer;
+                        //z轴位置，
                         mSurface.setLayer(mAnimLayer);
                         mSurfaceShown = false;
+                        //由于当前正在处理的WindowState对象所描述的一个应用程序窗口的绘图表面刚刚创建出来，因此，我们就需要通知SurfaceFlinger服务将它隐藏起来
                         mSurface.hide();
                         if ((mAttrs.flags&WindowManager.LayoutParams.FLAG_DITHER) != 0) {
                             if (SHOW_TRANSACTIONS) logSurface(this, "DITHER", null);
+                            
+                            //说明一个应用程序窗口的图形缓冲区在渲染时，需要进行抖动处理，
                             mSurface.setFlags(Surface.SURFACE_DITHER,
                                     Surface.SURFACE_DITHER);
                         }
@@ -8128,7 +8254,7 @@ public class WindowManagerService extends IWindowManager.Stub
     // -------------------------------------------------------------
     // IWindowManager API
     // -------------------------------------------------------------
-
+		//打开一个会话，，一个进程只有一个，，
     public IWindowSession openSession(IInputMethodClient client,
             IInputContext inputContext) {
         if (client == null) throw new IllegalArgumentException("null client");
@@ -8159,12 +8285,12 @@ public class WindowManagerService extends IWindowManager.Stub
     // -------------------------------------------------------------
     // Internals
     // -------------------------------------------------------------
-
+//寻找窗口对象
     final WindowState windowForClientLocked(Session session, IWindow client,
             boolean throwOnError) {
         return windowForClientLocked(session, client.asBinder(), throwOnError);
     }
-
+//从WindowMap中找到与session对应，并且代表client的WindowState对象，，一个android进程只有一个session，一个session对应多个WindowState,,一个WindowState对应App中的W对象
     final WindowState windowForClientLocked(Session session, IBinder client,
             boolean throwOnError) {
         WindowState win = mWindowMap.get(client);

@@ -25,6 +25,7 @@ extern "C" int system_init();
 
 static void android_server_SystemServer_init1(JNIEnv* env, jobject clazz)
 {
+		//system_init.cpp文件里面，，，
     system_init();
 }
 

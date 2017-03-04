@@ -63,7 +63,7 @@ public:
 };
 
 sp<IServiceManager> defaultServiceManager();
-
+//获取Servic并且保存在第二个参数里面，
 template<typename INTERFACE>
 status_t getService(const String16& name, sp<INTERFACE>* outService)
 {

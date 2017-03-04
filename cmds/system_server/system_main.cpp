@@ -56,6 +56,6 @@ int main(int argc, const char* const argv[])
     //setgid(GID_SYSTEM);
     //setuid(UID_SYSTEM);
     #endif
-
+		//调用system_init.cpp里面的函数，
     system_init();    
 }

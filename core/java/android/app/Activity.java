@@ -3538,6 +3538,7 @@ public class Activity extends ContextThemeWrapper
         }
 
         if (WINDOW_SERVICE.equals(name)) {
+        		//返回的是LocalWindowManager,,,,
             return mWindowManager;
         } else if (SEARCH_SERVICE.equals(name)) {
             ensureSearchManager();

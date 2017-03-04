@@ -161,9 +161,12 @@ public final class ViewRoot extends Handler implements ViewParent,
 
     boolean mTraversalScheduled;
     boolean mWillDrawSoon;
+    //用来描述应用程序进程的UI线程是否需要正在被请求执行一个UI布局操作。
     boolean mLayoutRequested;
+    //用来描述应用程序进程的这个窗口是否第一次处理ui
     boolean mFirst;
     boolean mReportNextDraw;
+    //用来描述应用程序进程的UI线程是否需要将一个应用程序窗口的全部区域都重新绘制。
     boolean mFullRedrawNeeded;
     boolean mNewSurfaceNeeded;
     boolean mHasHadWindowFocus;
@@ -173,6 +176,12 @@ public final class ViewRoot extends Handler implements ViewParent,
 
     // These can be accessed by any thread, must be protected with a lock.
     // Surface can never be reassigned or cleared (use Surface.clear()).
+      //应用程序侧的Surface负责填充Ui数据（绘制操作只需要考虑自己就行了），WMS侧的Surface负责设置窗口的大小位置等信息（这些需要从全局的角度考虑不同的窗口叠加），
+      
+      //它指向一个Java层的Surface对象，用来描述一个应用程序窗口的绘图表面
+      //注意，成员变量mSurface所指向的Surface对象在创建的时候，还没有在C++层有一个关联的Surface对象，因此，这时候它描述的就是一个无效的绘图表面。
+      //另外，这个Surface对象在应用程序窗口运行的过程中，也会可能被销毁，因此，这时候它描述的绘图表面也会变得无效。
+      //在上述两种情况中，我们都需要请求WindowManagerService服务来为当前正在处理的应用程序窗口创建有一个有效的绘图表面，以便可以在上面渲染UI。
     private final Surface mSurface = new Surface();
 
     boolean mAdded;
@@ -493,6 +502,9 @@ public final class ViewRoot extends Handler implements ViewParent,
                         mTranslator == null ? 1.0f : mTranslator.applicationScale;
                 if (panelParentView != null) {
                 	//当前窗口是一个子窗口，，，
+                	//  假如A是Activity，B是A的子窗口，C是B的子窗口，那么B和C的mPanelParentWindowToken都是A的W对象对应的IBinder对象，
+                	//只是目前WMS暂时不支持三级窗口，也就是说子窗口没有子窗口了。
+    						//Dialog窗口目前的类型也是顶级窗口，用的token也是对应Activity的ActivityRecord
                     mAttachInfo.mPanelParentWindowToken
                             = panelParentView.getApplicationWindowToken();
                 }
@@ -745,6 +757,7 @@ public final class ViewRoot extends Handler implements ViewParent,
         mWillDrawSoon = true;
         boolean windowResizesToFitContent = false;
         boolean fullRedrawNeeded = mFullRedrawNeeded;
+        //用来描述当前正在处理的窗口在本轮的DO_TRAVERSAL消息处理中是否新创建了一个绘图表面，它的初始值为false
         boolean newSurface = false;
         boolean surfaceChanged = false;
         WindowManager.LayoutParams lp = mWindowAttributes;
@@ -959,10 +972,11 @@ public final class ViewRoot extends Handler implements ViewParent,
         int relayoutResult = 0;
         if (mFirst || windowShouldResize || insetsChanged
                 || viewVisibilityChanged || params != null) {
-                //1.第一次
+                //1.当前窗口的第一次处理ui，
                 //2.窗口尺寸变化了
-                //3.窗口的insets变化了
+                //3.窗口的insets变化了，窗口边村变化了，
                 //4.窗口的可见性变化了
+                //5.窗口的布局参数变化了，，，
 
             if (viewVisibility == View.VISIBLE) {
                 // If this window is giving internal insets to the window
@@ -993,7 +1007,7 @@ public final class ViewRoot extends Handler implements ViewParent,
             boolean initialized = false;
             boolean contentInsetsChanged = false;
             boolean visibleInsetsChanged;
-            boolean hadSurface = mSurface.isValid();//在relayoutWindow之前计算的，，
+            boolean hadSurface = mSurface.isValid();//在relayoutWindow之前计算的，，保存之前是否已经创建了Surface，因为当前函数不只执行一次，，，，
             try {
                 int fl = 0;
                 if (params != null) {
@@ -1010,6 +1024,8 @@ public final class ViewRoot extends Handler implements ViewParent,
                 
                 
                 //请求WMS按照指定的大小重新分配大小，，，得到真正的窗口大小保存在mWinFrame
+                //这里会导致在WMS里面创建对应的Surface，，，
+                //请求WMS重新布局当前窗口，，，当然这有可能影响其他窗口的布局，
                 relayoutResult = relayoutWindow(params, viewVisibility, insetsPending);
 
                 if (params != null) {
@@ -1046,7 +1062,7 @@ public final class ViewRoot extends Handler implements ViewParent,
 
                 if (!hadSurface) {
                     if (mSurface.isValid()) {
-                    	//之前surface无效，现在有效了，，因为relayoutWindow会真正的在WMS里面创建Surface，，
+                    	//之前surface无效，现在有效了，那么代表是WMS重新创建了一个Surface，因为relayoutWindow会真正的在WMS里面创建Surface，，
                         // If we are creating a new surface, then we need to
                         // completely redraw it.  Also, when we get to the
                         // point of drawing it we will hold off and schedule
@@ -1215,7 +1231,7 @@ public final class ViewRoot extends Handler implements ViewParent,
                 startTime = SystemClock.elapsedRealtime();
             }
             
-            
+            //先在WMS里面布局窗口对象，然后才在应用程序侧布局窗口的ui，，，
             
             //触发布局操作，，，看到是view测量出来的宽高，，，
             host.layout(0, 0, host.mMeasuredWidth, host.mMeasuredHeight);
@@ -1336,9 +1352,9 @@ public final class ViewRoot extends Handler implements ViewParent,
                 }
             }
         }
-				//绘制之前的操作，，，
+				//绘制之前的操作，，，到时候可以尝试看下这个有回调几次才开始真正的绘制操作，，，
         boolean cancelDraw = attachInfo.mTreeObserver.dispatchOnPreDraw();
-
+				//第一次执行遍历函数时，newSurface是true的，，，也就算下一次遍历才会真正的绘制，，，
         if (!cancelDraw && !newSurface) {
             mFullRedrawNeeded = false;
             
@@ -1370,6 +1386,7 @@ public final class ViewRoot extends Handler implements ViewParent,
                 }
             }
         } else {
+        	//取消了绘制请求，或者Surface是刚刚新建的，那么需要重新发出一个遍历的异步消息，，，
             // We were supposed to report when we are done drawing. Since we canceled the
             // draw, remember it here.
             if ((relayoutResult&WindowManagerImpl.RELAYOUT_FIRST_TIME) != 0) {
@@ -1380,6 +1397,8 @@ public final class ViewRoot extends Handler implements ViewParent,
             }
             // Try again
             scheduleTraversals();
+            
+            //这里是否也表明第一次绘制，最少要经历俩次measure，最多经历6次measure，，一次layout,,
         }
     }
 
@@ -2739,6 +2758,15 @@ public final class ViewRoot extends Handler implements ViewParent,
         mPendingConfiguration.seq = 0;
         //Log.d(TAG, ">>>>>> CALLING relayout");
         //注意mWinFrame，mPendingContentInsets，mPendingVisibleInsets，mPendingConfiguration，mSurface是输出参数，是WMS来改变的，，，
+        //1. 窗口的大小：最终保存在输出参数outFrame中。
+
+       //2. 窗口的内容区域边衬大小：最终保存在输出参数outContentInsets中。
+
+      // 3. 窗口的可见区域边衬大小：最终保存在输出参数outVisibleInsets中。
+
+      // 4. 窗口的配置信息：最终保存在输出参数outConfig中。
+
+      // 5. 窗口的绘图表面：最终保存在输出参数outSurface中。
         int relayoutResult = sWindowSession.relayout(
                 mWindow, params,
                 (int) (mView.mMeasuredWidth * appScale + 0.5f),

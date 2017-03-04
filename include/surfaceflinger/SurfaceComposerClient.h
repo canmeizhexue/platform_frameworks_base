@@ -43,11 +43,11 @@ class DisplayInfo;
 class surface_flinger_cblk_t;
 
 // ---------------------------------------------------------------------------
-
+//单例的，
 class ComposerService : public Singleton<ComposerService>
 {
     // these are constants
-    sp<ISurfaceComposer> mComposerService;
+    sp<ISurfaceComposer> mComposerService;//保存SurfaceFlinger,,,因为SurfaceFlinger继承了ISurfaceComposer类，
     sp<IMemoryHeap> mServerCblkMemory;
     surface_flinger_cblk_t volatile* mServerCblk;
     ComposerService();
@@ -166,7 +166,7 @@ private:
                 // these don't need to be protected because they never change
                 // after assignment
                 status_t                    mStatus;
-                sp<ISurfaceComposerClient>  mClient;
+                sp<ISurfaceComposerClient>  mClient;//有一种情况保存的是BpSurfaceComposerClient，对应SurfaceFlinger里面的一个Client,,,
 };
 
 // ---------------------------------------------------------------------------

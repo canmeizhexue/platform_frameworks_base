@@ -69,7 +69,7 @@
 
 namespace android {
 // ---------------------------------------------------------------------------
-
+//构造函数，，，，，
 SurfaceFlinger::SurfaceFlinger()
     :   BnSurfaceComposer(), Thread(false),
         mTransactionFlags(0),
@@ -99,7 +99,7 @@ SurfaceFlinger::SurfaceFlinger()
 {
     init();
 }
-
+//初始化，，，
 void SurfaceFlinger::init()
 {
     LOGI("SurfaceFlinger is starting");
@@ -174,12 +174,14 @@ void SurfaceFlinger::bootFinished()
     mBootFinished = true;
     property_set("ctl.stop", "bootanim");
 }
-
+//第一次构造智能指针的时候会调用，
 void SurfaceFlinger::onFirstRef()
 {
+	//启动ui渲染线程SurfaceFlinger，后续会调用到readyToRun
     run("SurfaceFlinger", PRIORITY_URGENT_DISPLAY);
 
     // Wait for the main thread to be done with its initialization
+    //等待线程初始化完成，
     mReadyToRunBarrier.wait();
 }
 
@@ -198,10 +200,13 @@ status_t SurfaceFlinger::readyToRun()
     {
         // initialize the main display
         GraphicPlane& plane(graphicPlane(dpy));
+        //在DisplayHardware对象hw的创建过程中，会创建另外一个线程，用来监控控制台事件，即监控硬件帧缓冲区的睡眠和唤醒事件。
         DisplayHardware* const hw = new DisplayHardware(this, dpy);
         plane.setDisplayHardware(hw);
     }
-
+		//创建了一块大小为4096，即4KB的匿名共享内存，接着将这块匿名共享内存结构化为一个surface_flinger_cblk_t对象来访问。
+		//这个surface_flinger_cblk_t对象就保存在SurfaceFlinger类的成员变量mServerCblk中。
+		//这块匿名共享内存用来保存设备显示屏的属性信息，例如，宽度、高度、密度和每秒多少帧等信息
     // create the shared control-block
     mServerHeap = new MemoryHeapBase(4096,
             MemoryHeapBase::READ_ONLY, "SurfaceFlinger read-only heap");
@@ -223,6 +228,8 @@ status_t SurfaceFlinger::readyToRun()
     const uint32_t f = hw.getFormat();
     hw.makeCurrent();
 
+
+		//将系统主显示屏的属性信息保存在前面所创建的一块匿名共享内存中，以便可以将系统主显示屏的属性信息返回给系统中的其它进程访问
     // initialize the shared control block
     mServerCblk->connected |= 1<<dpy;
     display_cblk_t* dcblk = mServerCblk->displays + dpy;
@@ -236,6 +243,8 @@ status_t SurfaceFlinger::readyToRun()
     dcblk->fps          = hw.getRefreshRate();
     dcblk->density      = hw.getDensity();
 
+
+//用来初始化OpenGL库，因为SurfaceFlinger服务是通过OpenGL库提供的API来渲染系统的UI的。
     // Initialize OpenGL|ES
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
     glPixelStorei(GL_PACK_ALIGNMENT, 4); 
@@ -263,13 +272,13 @@ status_t SurfaceFlinger::readyToRun()
     glOrthof(0, w, h, 0, 0, 1);
 
    LayerDim::initDimmer(this, w, h);
-
+		//告诉SystemServer主线程，SurfaceFlinger渲染线程创建好了，，之前SystemServer主线程一直在等待，，，
     mReadyToRunBarrier.open();
 
     /*
      *  We're now ready to accept clients...
      */
-
+		//表示要启动Android系统的开机动画，开机动画启动的时候SurfaceFlinger服务已经启动起来了。。。
     // start boot animation
     property_set("ctl.start", "bootanim");
     
@@ -1193,7 +1202,7 @@ int SurfaceFlinger::setOrientation(DisplayID dpy,
     }
     return orientation;
 }
-
+//创建Surface，
 sp<ISurface> SurfaceFlinger::createSurface(const sp<Client>& client, int pid,
         const String8& name, ISurfaceComposerClient::surface_data_t* params,
         DisplayID d, uint32_t w, uint32_t h, PixelFormat format,
@@ -2292,6 +2301,7 @@ sp<IMemoryHeap> Client::getControlBlock() const {
 ssize_t Client::getTokenForSurface(const sp<ISurface>& sur) const {
     return -1;
 }
+//被客户端远程调用，
 sp<ISurface> Client::createSurface(
         ISurfaceComposerClient::surface_data_t* params, int pid,
         const String8& name,

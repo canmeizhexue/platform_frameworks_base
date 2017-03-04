@@ -362,6 +362,7 @@ public abstract class Window {
      */
     public void setWindowManager(WindowManager wm,
             IBinder appToken, String appName) {
+        //这里的wm有可能传进来的是LocalWindowManager,,构造Dialog的时候就是这样，，，
         mAppToken = appToken;
         mAppName = appName;
         if (wm == null) {
@@ -370,7 +371,7 @@ public abstract class Window {
         }
         mWindowManager = new LocalWindowManager(wm);
     }
-
+		//返回的主要就是这个，，，
     private class LocalWindowManager implements WindowManager {
         LocalWindowManager(WindowManager wm) {
             mWindowManager = wm;//对于Activity而言，这个wm为WindowManagerImpl
@@ -386,6 +387,7 @@ public abstract class Window {
             //对于Activity而言，wp.type=TYPE_BASE_APPLICATION
             if (wp.type >= WindowManager.LayoutParams.FIRST_SUB_WINDOW &&
                 wp.type <= WindowManager.LayoutParams.LAST_SUB_WINDOW) {
+                	//子窗口，，，，
                 if (wp.token == null) {
                     View decor = peekDecorView();
                     if (decor != null) {
@@ -414,7 +416,7 @@ public abstract class Window {
                 }
             } else {
                 if (wp.token == null) {
-                		//启动Activity的时候，满足这个条件，
+                		//启动Activity的时候，满足这个条件，对于默认的Dialog而言，也是满足这个条件，它的默认类型是TYPE_APPLICATION，，
                     wp.token = mContainer == null ? mAppToken : mContainer.mAppToken;
                 }
                 if ((curTitle == null || curTitle.length() == 0)

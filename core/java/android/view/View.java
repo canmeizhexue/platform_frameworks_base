@@ -101,7 +101,7 @@ import java.util.WeakHashMap;
  * </div>
  *
  * <a name="Using"></a>
- * <h3>Using Views</h3>
+ * <h3>Using Views</h3>dispatchAttachedToWindow
  * <p>
  * All of the views in a window are arranged in a single tree. You can add views
  * either from code or by specifying a tree of views in one or more XML layout
@@ -6096,7 +6096,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
         return mWindowAttachCount;
     }
 
-    /**
+    /**要么返回null，要么返回对应窗口的W对象转换而成的IBinder
      * Retrieve a unique token identifying the window this view is attached to.
      * @return Return the window's token for use in
      * {@link WindowManager.LayoutParams#token WindowManager.LayoutParams.token}.
@@ -6105,7 +6105,11 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
         return mAttachInfo != null ? mAttachInfo.mWindowToken : null;
     }
 
-    /**
+    /**如果不是子窗口的话，返回的就是对应的W对象的IBinder(Activity属于这种)
+    
+    假如A是Activity，B是A的子窗口，C是B的子窗口，那么B和C的mPanelParentWindowToken都是A的W对象对应的IBinder对象，只是目前WMS暂时不支持三级窗口，也就是说子窗口没有子窗口了。
+    Dialog窗口目前的类型也是顶级窗口，用的token也是对应Activity的ActivityRecord
+    	
      * Retrieve a unique token identifying the top-level "real" window of
      * the window that this view is attached to.  That is, this is like
      * {@link #getWindowToken}, except if the window this view in is a panel
@@ -6118,7 +6122,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
     public IBinder getApplicationWindowToken() {
         AttachInfo ai = mAttachInfo;
         if (ai != null) {
-            IBinder appWindowToken = ai.mPanelParentWindowToken;
+            IBinder appWindowToken = ai.mPanelParentWindowToken;//子窗口这个字段才有值，，，保存的是父窗口的
             if (appWindowToken == null) {
                 appWindowToken = ai.mWindowToken;
             }
@@ -9285,9 +9289,9 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
 
         final IWindowSession mSession;
 
-        final IWindow mWindow;
+        final IWindow mWindow;  // 这个窗口的W对象，
 
-        final IBinder mWindowToken;
+        final IBinder mWindowToken; //这个窗口的W对象转换成的IBinder对象，，，感觉多余，，确定无疑的，在构造函数里面使用的，，
 
         final Callbacks mRootCallbacks;
 
@@ -9296,7 +9300,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
          */
         View mRootView;
 
-        IBinder mPanelParentWindowToken;
+        IBinder mPanelParentWindowToken;///只在ViewRoot里面赋值了，，
         Surface mSurface;
 
         /**
@@ -9456,7 +9460,7 @@ public class View implements Drawable.Callback, KeyEvent.Callback, Accessibility
          */
         final ArrayList<View> mFocusablesTempList = new ArrayList<View>(24);
 
-        /**
+        /**在ViewRoot的构造函数里面创建的，，，
          * Creates a new set of attachment information with the specified
          * events handler and thread.
          *

@@ -67,21 +67,21 @@ public interface WindowManager extends ViewManager {
     
     public static class LayoutParams extends ViewGroup.LayoutParams
             implements Parcelable {
-        /**
+        /**有可能是偏移值，有可能被忽略
          * X position for this window.  With the default gravity it is ignored.
          * When using {@link Gravity#LEFT} or {@link Gravity#RIGHT} it provides
          * an offset from the given edge.
          */
         public int x;
         
-        /**
+        /**有可能是偏移值，有可能被忽略
          * Y position for this window.  With the default gravity it is ignored.
          * When using {@link Gravity#TOP} or {@link Gravity#BOTTOM} it provides
          * an offset from the given edge.
          */
         public int y;
 
-        /**
+        /**给view的额外空间
          * Indicates how much of the extra space will be allocated horizontally
          * to the view associated with these LayoutParams. Specify 0 if the view
          * should not be stretched. Otherwise the extra pixels will be pro-rated
@@ -89,7 +89,7 @@ public interface WindowManager extends ViewManager {
          */
         public float horizontalWeight;
 
-        /**
+        /**给view的额外空间
          * Indicates how much of the extra space will be allocated vertically
          * to the view associated with these LayoutParams. Specify 0 if the view
          * should not be stretched. Otherwise the extra pixels will be pro-rated
@@ -97,7 +97,10 @@ public interface WindowManager extends ViewManager {
          */
         public float verticalWeight;
         
-        /**
+        /**主要有三类窗口
+         * 1.应用程序窗口，它的token一定是Activity对应的ActivityRecord
+         * 2.子窗口，它的token一定是父窗口的W对象转换而来的IBinder
+         * 3.系统窗口
          * The general type of window.  There are three main classes of
          * window types:
          * <ul>
@@ -450,7 +453,11 @@ public interface WindowManager extends ViewManager {
         /** Window flag: blur everything behind this window. */
         public static final int FLAG_BLUR_BEHIND        = 0x00000004;
         
-        /** Window flag: this window won't ever get key input focus, so the
+        /** 1.不能获取焦点，甚至不能获取键盘事件(key事件)，这样的话键盘事件就会发送到下面一个可以获取焦点的窗口了，
+         * 也就是说键盘事件只能发送给能够获取焦点的窗口
+         * 2.这个同时也表明会隐式的设置其他标记位
+         * 3.既然不能接受键盘事件，当然也不能和输入法进行交互，进而可能覆盖在输入法窗口的上面(遮盖住输入法窗口)
+        	Window flag: this window won't ever get key input focus, so the
          * user can not send key or other button events to it.  Those will
          * instead go to whatever focusable window is behind it.  This flag
          * will also enable {@link #FLAG_NOT_TOUCH_MODAL} whether or not that
@@ -465,10 +472,17 @@ public interface WindowManager extends ViewManager {
          * can use {@link #FLAG_ALT_FOCUSABLE_IM} to modify this behavior. */
         public static final int FLAG_NOT_FOCUSABLE      = 0x00000008;
         
-        /** Window flag: this window can never receive touch events. */
+        /** 标识不能接收touch事件Window flag: this window can never receive touch events. */
         public static final int FLAG_NOT_TOUCHABLE      = 0x00000010;
         
-        /** Window flag: Even when this window is focusable (its
+        /** 这个属性描述的是这个对话框边界外的点击事件的处理情况
+         * 非模态对话框属性，默认模态对话框属性
+         * 1. 即使这个窗口是能够获取焦点的，，边界外的点击事件允许发送给下面的窗口
+         
+         
+         * 模态对话框属性（默认的情况）
+         * 1.这个窗口消耗所有点击事件，不管是否在这个窗口的边界内
+        Window flag: Even when this window is focusable (its
          * {@link #FLAG_NOT_FOCUSABLE is not set), allow any pointer events
          * outside of the window to be sent to the windows behind it.  Otherwise
          * it will consume all pointer events itself, regardless of whether they
@@ -493,7 +507,7 @@ public interface WindowManager extends ViewManager {
          *  by Window as described in {@link Window#setFlags}. */
         public static final int FLAG_LAYOUT_IN_SCREEN   = 0x00000100;
         
-        /** Window flag: allow window to extend outside of the screen. */
+        /** 允许窗口超出屏幕Window flag: allow window to extend outside of the screen. */
         public static final int FLAG_LAYOUT_NO_LIMITS   = 0x00000200;
         
         /** Window flag: Hide all screen decorations (e.g. status bar) while
@@ -537,7 +551,13 @@ public interface WindowManager extends ViewManager {
          * set for you by Window as described in {@link Window#setFlags}.*/
         public static final int FLAG_LAYOUT_INSET_DECOR = 0x00010000;
         
-        /** Window flag: invert the state of {@link #FLAG_NOT_FOCUSABLE} with
+        /** 主要描述输入法窗口和当前窗口的关系，改变默认情况下获取焦点和输入法窗口的行为
+         * 1.如果这个窗口不能获取焦点，意味着不需要和输入法窗口交互，但是同时设置这个标记，
+         * 那么效果就是这个窗口好像要与输入法窗口交互一样（事实上是不需要），这种好像表现在不再覆盖在输入法窗口上，而是为输入法窗口腾出空间
+         * 2.如果这个窗口能够获取焦点，意味着需要和输入法窗口，但是同时设置这个标记时，
+         * 那么效果就是这个窗口好像不要与输入法窗口交互一样（事实上需要），这种好像表现在可以覆盖在输入法窗口上
+        
+        Window flag: invert the state of {@link #FLAG_NOT_FOCUSABLE} with
          * respect to how this window interacts with the current method.  That
          * is, if FLAG_NOT_FOCUSABLE is set and this flag is set, then the
          * window will behave as if it needs to interact with the input method
@@ -548,7 +568,10 @@ public interface WindowManager extends ViewManager {
          */
         public static final int FLAG_ALT_FOCUSABLE_IM = 0x00020000;
         
-        /** Window flag: if you have set {@link #FLAG_NOT_TOUCH_MODAL}, you
+        /** 
+        如果不是模态窗口，那么设置这个属性后，在窗口边界外的点击事件会在这个窗口收到一个特殊的点击事件
+         *  模态窗口会收到所有的点击事件？？？
+        Window flag: if you have set {@link #FLAG_NOT_TOUCH_MODAL}, you
          * can set this flag to receive a single special MotionEvent with
          * the action
          * {@link MotionEvent#ACTION_OUTSIDE MotionEvent.ACTION_OUTSIDE} for
@@ -775,7 +798,7 @@ public interface WindowManager extends ViewManager {
          */
         public int softInputMode;
         
-        /**
+        /**窗口的大致位置
          * Placement of window within the screen as per {@link Gravity}
          *
          * @see Gravity
@@ -807,13 +830,13 @@ public interface WindowManager extends ViewManager {
          */
         public int windowAnimations;
     
-        /**
+        /**这个窗口的透明度
          * An alpha value to apply to this entire window.
          * An alpha of 1.0 means fully opaque and 0.0 means fully transparent
          */
         public float alpha = 1.0f;
     
-        /**
+        /**后面窗口的昏暗程度，因为当前窗口不一定完全占据整个屏幕
          * When {@link #FLAG_DIM_BEHIND} is set, this is the amount of dimming
          * to apply.  Range is from 1.0 for completely opaque to 0.0 for no
          * dim.
@@ -836,7 +859,10 @@ public interface WindowManager extends ViewManager {
          */
         public float buttonBrightness = BRIGHTNESS_OVERRIDE_NONE;
 
-        /**
+        /**窗口的唯一标识符
+         * 1.如果创建的窗口时应用窗口，一开始token是代表应用的ActivityRecord，（但是在添加窗口时会把这个字段改成ViewRoot类的W对象，自己研究代码时并没有看到这个，），进而被WMS调用
+         * 2.如果创建的是子窗口，那么它指向他父窗口的W对象
+         * 3.如果是系统窗口，那么它为null
          * Identifier for this window.  This will usually be filled in for
          * you.
          */

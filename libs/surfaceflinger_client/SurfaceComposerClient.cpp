@@ -157,16 +157,17 @@ static inline int compare_type( const layer_state_t& lhs,
     if (lhs.surface > rhs.surface)  return 1;
     return 0;
 }
-
+//构造函数，
 SurfaceComposerClient::SurfaceComposerClient()
     : mTransactionOpen(0), mPrebuiltLayerState(0), mStatus(NO_INIT)
 {
 }
-
+//在SurfaceSession构建的时候会构建SurfaceComposerClient,它会导致调用这个函数，
 void SurfaceComposerClient::onFirstRef()
 {
     sp<ISurfaceComposer> sm(getComposerService());
     if (sm != 0) {
+    	//调用SurfaceFlinger服务，这也说明ISurfaceComposerClient只有一个，客户端通过这个和SurfaceFlinger进行通信，
         sp<ISurfaceComposerClient> conn = sm->createConnection();
         if (conn != 0) {
             mClient = conn;
@@ -289,7 +290,7 @@ sp<SurfaceControl> SurfaceComposerClient::createSurface(
     return SurfaceComposerClient::createSurface(pid, name, display,
             w, h, format, flags);
 }
-
+//创建SurfaceControl,,,
 sp<SurfaceControl> SurfaceComposerClient::createSurface(
         int pid,
         const String8& name,
@@ -302,6 +303,7 @@ sp<SurfaceControl> SurfaceComposerClient::createSurface(
     sp<SurfaceControl> result;
     if (mStatus == NO_ERROR) {
         ISurfaceComposerClient::surface_data_t data;
+        	//mClient是什么，其实是BpSurfaceComposerClient，连接到SurfaceFlinger
         sp<ISurface> surface = mClient->createSurface(&data, pid, name,
                 display, w, h, format, flags);
         if (surface != 0) {
